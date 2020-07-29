@@ -26,7 +26,7 @@ void set_droplet(struct Droplet* droplet_ptr, int rows){
 	droplet_ptr->tick	= 0;
 	droplet_ptr->offset = rand()%(int)(rows*1.5) + 1;
 	droplet_ptr->size	= droplet_ptr->offset + droplet_ptr->length;
-	droplet_ptr->arr_ptr= (int*)malloc((droplet_ptr->length+droplet_ptr->offset)*sizeof(int));
+	droplet_ptr->arr_ptr= (int*)malloc(droplet_ptr->size*sizeof(int));
 
 	// Set front " " offset
 	for(int i = 0; i < droplet_ptr->offset; i++){
@@ -45,8 +45,8 @@ int main(int argc, char* argv[]){
 
 	// These are temporary, they should be replaced by argv 1 and 2
 	// later, which will be "$(tput cols)" and "$(tput lines)".
-	int cols = 60;
-	int rows = 40;
+	int cols = 2;
+	int rows = 7;
 	
 	// The first matrix, holds droplets whose final element 
 	// is not currently displayed
@@ -62,25 +62,10 @@ int main(int argc, char* argv[]){
 
 	// Cycle through the first matrix and set all the droplets.
 	for(size_t i = 0; i < cols; i++){
-		printf("Droplet %d\n", (int)i);
 		set_droplet(&matrix1[i], rows);
 	}
-	
-	// print shit
-	
-	FILE * f;
-	f = fopen("the_matrix", "w");
-	for(int i = 0; i < cols; i++){
-		fprintf(f, "%d: speed :%d, length :%d, offset: %d\n", i, matrix1[i].speed, matrix1[i].length, matrix1[i].offset);
 
-		int size = matrix1[i].length + matrix1[i].offset;
-		fprintf(f, "SIZE: %d\n", size);
-		for(int j = 0; j < size; j++){
-			fprintf(f, "%c ", matrix1[i].arr_ptr[j]);
-		}
-		fprintf(f, "\n\n");
-	}
-	fclose(f);
+	FILE * f;
 	
 	system("clear");
 	// main loop	
@@ -90,7 +75,7 @@ int main(int argc, char* argv[]){
 			if(matrix1[i].index < matrix1[i].size-1){	
 				if(matrix1[i].tick == matrix1[i].speed){
 					matrix1[i].tick = 0;
-					matrix1[i].index += 1;
+					matrix1[i].index++;
 				
 					for(size_t j = 0; j < matrix1[i].index; j++){
 						int ind = matrix1[i].index;
@@ -100,9 +85,10 @@ int main(int argc, char* argv[]){
 				matrix1[i].tick += 1;
 			} else {
 				free(matrix1[i].arr_ptr);
+				matrix1[i].arr_ptr = NULL;
 				set_droplet(&matrix1[i], rows);
+				}
 			}
-		}
 		system("clear");
 		// Border top
 		printf("+");
@@ -125,13 +111,13 @@ int main(int argc, char* argv[]){
 		}
 		printf("+\n\n");
 		
-		/*
 		for(size_t i = 0; i < cols; i++){
-			printf("col %d, tick %d, index %d, size %d\n", (int)i, matrix1[i].tick, matrix1[i].index, matrix1[i].size);
-		}
-		*/
+			printf("col %d, tick %d, speed %d, index %d, size %d\n", 
+				(int)i, matrix1[i].tick, matrix1[i].speed, matrix1[i].index, matrix1[i].size);
+		}	
 		system("sleep 0.1");
 	}
+
 
 	return 0;
 }
