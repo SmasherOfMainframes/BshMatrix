@@ -1,30 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <time.h>
 
 /* HOW DOES THIS GARBAGE WORK???
- * There is one matrix holding $(cols) arrays. These are the matrix
- * droplets. One droplet for each column.
  *
- * As the droplet descends, once the last character is on screen, the
- * array is transfered to a second matrix, where it will be allocated
- * on heap. At the same time, the copy in the first matrix will be
- * reshuffled and sent back to the top.
- *
- * When a droplet is created in the first matrix, it has a length, speed,
- * offset and index. 
- * 	SPEED: How many ticks until the droplet descends one position.
- * 	LENGTH: The length of the array of characters.
- * 	OFFSET: How many leading blank spaces are in the array.
- * 	INDEX: Where the droplet is currently positioned on screen.
- *
- * FUNCTIONS:
- * 	set_droplet : creates a new droplet with randomized data.
- * 	move_droplet: moves droplet from matrix 1 to matrix 2.
- *	blank_droplet: 3/10 columns should be blank, so this should be
- *		called before a new droplet is created to add in some blank spots.
- *
- *
+ * gr8 question lol
  *
  */
 
@@ -42,33 +23,30 @@ void set_droplet(struct Droplet* droplet_ptr, int rows){
 	droplet_ptr->index	= 0;
 	droplet_ptr->length = rows - rand()%(rows/2);
 	droplet_ptr->speed 	= rand()%4 + 1;
-	droplet_ptr->offset = rand()%(int)(rows*0.5) + 1;
+	droplet_ptr->tick	= 0;
+	droplet_ptr->offset = rand()%(int)(rows*1.5) + 1;
 	droplet_ptr->size	= droplet_ptr->offset + droplet_ptr->length;
 	droplet_ptr->arr_ptr= (int*)malloc((droplet_ptr->length+droplet_ptr->offset)*sizeof(int));
 
-	int len = droplet_ptr->length;	
-	int off = droplet_ptr->offset;
-	
-	// Assign random int to matrix
-	for(int i = 0; i < off; i++){
+	// Set front " " offset
+	for(int i = 0; i < droplet_ptr->offset; i++){
 		droplet_ptr->arr_ptr[i] = 32;
 	}
-
-	int blank = rand()%10;
-	for(int i = off; i < (len + off); i++){	
-		if(blank < 3){
-			droplet_ptr->arr_ptr[i] = 32;
-		}
-		droplet_ptr->arr_ptr[i] = (rand()%(127-33))+32;
+	
+	// Set following digits
+	for(int i = droplet_ptr->offset; i < droplet_ptr->size; i++){	
+		droplet_ptr->arr_ptr[i] = (rand()%(127-33))+33;
 	}
 }
 
 int main(int argc, char* argv[]){
-	
+	// Set rand seed
+	srand(time(0));
+
 	// These are temporary, they should be replaced by argv 1 and 2
 	// later, which will be "$(tput cols)" and "$(tput lines)".
-	int cols = 78;
-	int rows = 44;
+	int cols = 60;
+	int rows = 40;
 	
 	// The first matrix, holds droplets whose final element 
 	// is not currently displayed
@@ -84,70 +62,76 @@ int main(int argc, char* argv[]){
 
 	// Cycle through the first matrix and set all the droplets.
 	for(size_t i = 0; i < cols; i++){
-		printf("Droplet %d\n", i);
+		printf("Droplet %d\n", (int)i);
 		set_droplet(&matrix1[i], rows);
 	}
 	
 	// print shit
+	
+	FILE * f;
+	f = fopen("the_matrix", "w");
 	for(int i = 0; i < cols; i++){
-		printf("%d: speed :%d, length :%d, offset: %d\n", i, matrix1[i].speed, matrix1[i].length, matrix1[i].offset);
+		fprintf(f, "%d: speed :%d, length :%d, offset: %d\n", i, matrix1[i].speed, matrix1[i].length, matrix1[i].offset);
 
 		int size = matrix1[i].length + matrix1[i].offset;
-		printf("SIZE: %d\n", size);
+		fprintf(f, "SIZE: %d\n", size);
 		for(int j = 0; j < size; j++){
-			printf("%c ", matrix1[i].arr_ptr[j]);
+			fprintf(f, "%c ", matrix1[i].arr_ptr[j]);
 		}
-		printf("\n\n");
+		fprintf(f, "\n\n");
 	}
+	fclose(f);
 	
-	printf("NEXT\n\n");	
 	system("clear");
-
 	// main loop	
 	while(1){
 		// matrixD[COL][ROW]
 		for(size_t i = 0; i < cols; i++){
+			if(matrix1[i].index < matrix1[i].size-1){	
+				if(matrix1[i].tick == matrix1[i].speed){
+					matrix1[i].tick = 0;
+					matrix1[i].index += 1;
 				
-			if(matrix1[i].tick == matrix1[i].speed){
-				matrix1[i].tick = 0;
-				matrix1[i].index += 1;
-				
-				for(size_t j = 0; j < matrix1[i].index; j++){
-					int ind = matrix1[i].index;
-					matrixD[i][j] = matrix1[i].arr_ptr[ind-j];
-							//matrix1[i].index+47-j;
-							//matrix1[i].arr_ptr[j];
+					for(size_t j = 0; j < matrix1[i].index; j++){
+						int ind = matrix1[i].index;
+						matrixD[i][j] = matrix1[i].arr_ptr[ind-j];
+					}
 				}
+				matrix1[i].tick += 1;
+			} else {
+				free(matrix1[i].arr_ptr);
+				set_droplet(&matrix1[i], rows);
 			}
-			matrix1[i].tick += 1;
 		}
 		system("clear");
+		// Border top
+		printf("+");
+		for(size_t i = 0; i < cols; i++){
+			printf("-");
+		}
+		printf("+\n");
+
 		for(size_t i = 0; i < rows; i++){
+			printf("|");
 			for(size_t j = 0; j < cols; j++){
 				printf("%c", matrixD[j][i]);
 			}
-			printf("\n");
+			printf("|\n");
 		}
-		system("sleep 0.4");
-	}
-	
-	/*
-	system("truncate -s 0 the_matrix");
+
+		printf("+");
+		for(size_t i = 0; i < cols; i++){
+			printf("-");
+		}
+		printf("+\n\n");
 		
-	system("clear");
-	for(int j = 0; j < 20; j++){
-		fout = fopen("the_matrix", "a");
-		for(int i = 0; i < cols; i++){
-			char c = (char)matrix1[i].arr_ptr[j];
-			fprintf(fout, "%c", c);
+		/*
+		for(size_t i = 0; i < cols; i++){
+			printf("col %d, tick %d, index %d, size %d\n", (int)i, matrix1[i].tick, matrix1[i].index, matrix1[i].size);
 		}
-		fprintf(fout, "\n");
-		fclose(fout);
-		system("clear");
-		system("tac the_matrix");
-		system("sleep 0.2");
+		*/
+		system("sleep 0.1");
 	}
-	*/
 
 	return 0;
 }
