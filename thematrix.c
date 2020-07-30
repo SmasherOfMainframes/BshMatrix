@@ -4,9 +4,34 @@
 #include <time.h>		// srand(time(0))
 #include <stdbool.h>	// BOOL
 
-/* HOW DOES THIS GARBAGE WORK???
+/* How does this trash work?
  *
- * gr8 question lol
+ * The Matrix is mainly built up of structs called Column. Each Column struct holds
+ * data on the column of the matrix. 
+ * 
+ * Every loop of the while loop in int main, each columns TICK attribute 
+ * increases by one. Once TICK reaches the value of SPEED, the INDEX attribute
+ * increases by one. So, SPEED determines how many ticks it takes to increase
+ * INDEX. 
+ *
+ * Every time INDEX is incremented, the top row of The Matrix is fed a new character.
+ * What character appears depends on whether the IS_BLANK attribute is true or false.
+ * If true, then every time INDEX is increased, a " " or int value 32 is added to the
+ * Matrix. If false, then a random ascii-mapped value is added to The Matrix, or, if 
+ * INDEX is currently less than the value of PADDING, a " " or 32 is added.
+ * 
+ * Padding refers to how many leading zeroes will be added before the regular 
+ * characters are added. This prevents long, continuous strings from displaying.
+ *
+ * Also, whenever INDEX is incremented, starting from the bottom of the Column, values
+ * are copied down from the very bottom to the second-from-the-top row. This is what 
+ * causes the strings to "fall" down the matrix.
+ *
+ * This continues until INDEX reaches the value LENGTH. When this happens, the Column
+ * struct is reshuffled with new, randomized values.
+ *
+ * Finally, a random number of non-" " characters are selected to be changed to a new
+ * value, to give the falling strings some fun randomness.
  *
  */
 
@@ -75,14 +100,15 @@ int main(int argc, char* argv[]){
 		}
 
 	}
-
+	
+	// Initialize the starting values of each column.
 	set_all_cols(columns, COLS, ROWS);
 
-	write_all_cols(columns, COLS);		// For debugging
+	// write_all_cols(columns, COLS);		// For debugging
 
 	// ------ MAIN LOOP -------- //
 
-	for(size_t t = 0; t < 300; t++){
+	while(1){
 		system("clear");
 		print_matrix(thematrix[0], COLS, ROWS);	
 		move_cols(columns, thematrix[0], COLS, ROWS);
@@ -165,10 +191,6 @@ void move_matrix(int* matrix, int cols, int rows){
 	for(size_t r = rows; r > 1; r--){
 		for(size_t c = 0; c < cols; c++){
 			*(matrix + c*rows + r-1) = *(matrix + c*rows + (r-2));
-			// f = fopen("the_matrix", "a");
-			// fprintf(f, "matrix + %d*%d + %d = matrix + %d*%d + %d\n", 
-			// 	c, rows, r, c, rows, r-1);
-			// fclose(f);
 		}
 	}
 }
