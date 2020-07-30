@@ -19,6 +19,7 @@ struct Column{
 	int speed;		// How many ticks until a letter appears
 	int tick;		// Keeps track of time for each column
 	int index;		// How far along length the column is
+	int padding;	// How many leading " " are in the string
 	int length;		// Determines the length of the "droplet" string
 	bool is_blank;	// Is the "droplet" string blank or regular?
 };
@@ -41,6 +42,10 @@ void write_all_cols(struct Column* columns, int cols);
 void move_matrix(int* matrix, int cols, int rows);
 
 void print_matrix(int* matrix, int cols, int rows);
+
+void move_cols(struct Column* column, int* matrix, int cols, int rows);
+
+void randomizer(int* matrix, int cols, int rows);
 
 /* --------------------------------------------------
 ------------------------- MAIN ----------------------
@@ -66,10 +71,7 @@ int main(int argc, char* argv[]){
 	// Set the matrix to all " "
 	for(size_t i = 0; i < ROWS; i++){
 		for(size_t j = 0; j < COLS; j++){
-			thematrix[j][i] = 45; // 32
-			// thematrix[j][0] = 60;
-			thematrix[j][1] = 60;
-			thematrix[j][2] = 60;
+			thematrix[j][i] = 32; // 32 = " "
 		}
 
 	}
@@ -78,16 +80,15 @@ int main(int argc, char* argv[]){
 
 	write_all_cols(columns, COLS);		// For debugging
 
-	// ------ GARBAGE -------- //
+	// ------ MAIN LOOP -------- //
 
-	for(size_t t = 0; t < 5; t++){
+	for(size_t t = 0; t < 300; t++){
 		system("clear");
 		print_matrix(thematrix[0], COLS, ROWS);	
-		move_matrix(thematrix[0], COLS, ROWS);
-		//new_drop()
-		system("sleep 0.5");
+		move_cols(columns, thematrix[0], COLS, ROWS);
+		randomizer(thematrix[0], COLS, ROWS);
+		system("sleep 0.1");
 	}
-	// print_matrix(thematrix[0], COLS, ROWS);
 
 	return 0;
 }
@@ -100,8 +101,9 @@ void set_col(struct Column* column, int rows){
 	column->speed		= rand()%4 + 1;
 	column->tick		= 0;
 	column->index		= 0;
-	column->length 		= rand()%rows + 1;
-	column->is_blank 	= (rand()%10 < 4) ? true : false;
+	column->length 		= rand()%(2*rows) + 5;
+	column->padding		= rand()%(column->length/2) + 1;
+	column->is_blank 	= (rand()%10 < 6) ? true : false;
 }
 
 void set_all_cols(struct Column* column, int cols, int rows){
@@ -125,11 +127,22 @@ void write_all_cols(struct Column* columns, int cols){
 
 void move_cols(struct Column* column, int* matrix, int cols, int rows){
 	for(size_t i = 0; i < cols; i++){
-		if(column[i]->tick == column[i]->speed){
-			column[i]->index++;
-		} else {
-			column[i]->tick++;
-		}
+		
+		column[i].tick++;
+
+		if(column[i].tick == column[i].speed){
+			column[i].index++;
+			column[i].tick = 0;
+
+			for(size_t r = rows; r > 1; r--){
+				*(matrix + i*rows + r-1) = *(matrix + i*rows + (r-2));
+			}
+			*(matrix + i*rows + 0) = (column[i].is_blank || column[i].index < column[i].padding) ? 32 : (rand()%(127-33))+33;
+
+			if(column[i].index == column[i].length){
+				set_col(&column[i], rows);
+			}
+		} 
 	}
 }
 
@@ -158,4 +171,14 @@ void move_matrix(int* matrix, int cols, int rows){
 			// fclose(f);
 		}
 	}
+}
+
+void randomizer(int* matrix, int cols, int rows){
+	for(size_t i = 0; i < rand()%(cols*rows/2); i++){
+		int x = rand()%(cols+1);
+		int y = rand()%(rows+1);
+		if(*(matrix + y*rows + x) != 32){
+			*(matrix + y*rows + x) = (rand()%(127-33))+33;
+		}
+	}	
 }
