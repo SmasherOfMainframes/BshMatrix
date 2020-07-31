@@ -18,8 +18,9 @@
  * Every time INDEX is incremented, the top row of The Matrix is fed a new character.
  * What character appears depends on whether the IS_BLANK attribute is true or false.
  * If true, then every time INDEX is increased, a " " or int value 32 is added to the
- * Matrix. If false, then a random ascii-mapped value is added to The Matrix, or, if 
- * INDEX is currently less than the value of PADDING, a " " or 32 is added.
+ * Matrix. If false, then a random ascii-mapped value is added to the head of the 
+ * falling string, or, if INDEX is currently less than the value of PADDING, a " " or 
+ * 32 is added.
  * 
  * Padding refers to how many leading zeroes will be added before the regular 
  * characters are added. This prevents long, continuous strings from displaying.
@@ -81,8 +82,6 @@ void write_col(struct Column* column, int i);
 
 void write_all_cols(struct Column* columns, int cols);
 
-void move_matrix(struct Matrix* matrix, int cols, int rows);
-
 void print_matrix(struct Matrix* matrix, int cols, int rows);
 
 void move_cols(struct Column* column, struct Matrix* matrix, int cols, int rows);
@@ -114,9 +113,7 @@ int main(int argc, char* argv[]){
 	for(size_t i = 0; i < ROWS; i++){
 		for(size_t j = 0; j < COLS; j++){
 			thematrix[j][i].val = 32; // 32 = " "
-			for(size_t k = 0; k < 8; k++){
-				thematrix[j][i].col[k] = GREEN[k];
-			}
+			strcpy(thematrix[j][i].col, CYAN);
 		}
 
 	}
@@ -180,30 +177,30 @@ void move_cols(struct Column* column, struct Matrix* matrix, int cols, int rows)
 			column[i].index++;
 			column[i].tick = 0;
 
+			// Add a new random val to top of column
+			// Second value doesn't really matter as long as it's a valid ascii character.
+			(matrix + i*rows + 0)->val = (column[i].is_blank || column[i].index < column[i].padding) ? 32 : 33;
+
 			// Move the column down one position
 			for(size_t r = rows; r > 1; r--){
-				*(matrix + i*rows + r-1) = *(matrix + i*rows + (r-2));
-
-				// Change the leading droplets character
-				if((matrix + i*rows + r-1)->val != 32 && (matrix + i*rows + r)->val == 32){
+				
+				bool below_blank = ((matrix + i*rows + r)->val == 32) ? true : false;
+				bool current_blank = ((matrix + i*rows + r-1)->val == 32) ? true : false;
+				bool above_blank = ((matrix + i*rows + r-2)->val == 32) ? true : false;
+				
+				// Adds a new random character one below the falling string
+				if(current_blank && !(above_blank)){
 					(matrix + i*rows + r-1)->val = (rand()%(127-33))+33;
+					// Sets new head color and previous head to body color
+					strcpy((matrix + i*rows + r-1)->col, WHITE);
+					strcpy((matrix + i*rows + r-2)->col, CYAN);
+				// Removes last character of string
+				} else if(!(current_blank) && above_blank){
+					(matrix + i*rows + r-1)->val = 32;
 				}
-			}
-
-			// Add a new random val to top of column
-			(matrix + i*rows + 0)->val = (column[i].is_blank || column[i].index < column[i].padding) ? 32 : (rand()%(127-33))+33;
-
-			if(!column[i].is_blank){
-				// Change its color - this is pretty fucking hacky
-				for(size_t col = 0; col < 8; col++){
-					(matrix + i*rows + 0)->col[col] = CYAN[col];
-				}
-
-				// Change the bottom-of-the-droplet color to HEAD_COLOR and change its value
-				if(column[i].index == column[i].padding){
-					for(size_t col = 0; col < 8; col++){
-						(matrix + i*rows + 0)->col[col] = WHITE[col];
-					}
+				// Prevents head from staying head color when it reaches the bottom
+				if(r == rows){
+					strcpy((matrix + i*rows + r-1)->col, CYAN);
 				}
 			}
 
@@ -230,14 +227,6 @@ void print_matrix(struct Matrix* matrix, int cols, int rows){
 	}
 }
 
-void move_matrix(struct Matrix* matrix, int cols, int rows){
-	for(size_t r = rows; r > 1; r--){
-		for(size_t c = 0; c < cols; c++){
-			*(matrix + c*rows + r-1) = *(matrix + c*rows + (r-2));
-		}
-	}
-}
-
 void randomizer(struct Matrix* matrix, int cols, int rows){
 	for(size_t i = 0; i < rand()%(cols*rows/2); i++){
 		int x = rand()%(cols+1);
@@ -247,10 +236,3 @@ void randomizer(struct Matrix* matrix, int cols, int rows){
 		}
 	}	
 }
-
-
-// void set_col(int* matrix, int cols, int rows){
-// 	for(size_t i = 0; i < 7; i++){
-// 		*(matrix + y*rows + x).col[i] = 
-// 	}
-// }
