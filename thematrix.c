@@ -3,6 +3,7 @@
 #include <unistd.h>		
 #include <time.h>		// srand(time(0))
 #include <stdbool.h>	// BOOL
+#include <string.h>		// strcmp
 
 /* How does this trash work?
  *
@@ -131,7 +132,7 @@ int main(int argc, char* argv[]){
 		system("clear");
 		print_matrix(thematrix[0], COLS, ROWS);	
 		move_cols(columns, thematrix[0], COLS, ROWS);
-		// randomizer(thematrix[0], COLS, ROWS);
+		randomizer(thematrix[0], COLS, ROWS);
 		system("sleep 0.1");
 	}
 
@@ -143,7 +144,7 @@ int main(int argc, char* argv[]){
 -------------------------------------------------- */
 
 void set_col(struct Column* column, int rows){
-	column->speed		= rand()%4 + 1;
+	column->speed		= rand()%3 + 1;
 	column->tick		= 0;
 	column->index		= 0;
 	column->length 		= rand()%(2*rows) + 5;
@@ -179,25 +180,34 @@ void move_cols(struct Column* column, struct Matrix* matrix, int cols, int rows)
 			column[i].index++;
 			column[i].tick = 0;
 
+			// Move the column down one position
 			for(size_t r = rows; r > 1; r--){
 				*(matrix + i*rows + r-1) = *(matrix + i*rows + (r-2));
-				// *(matrix + i*rows + r-1).val = *(matrix + i*rows + (r-2)).;
-				// if(column[i].index == column[i].padding+1){
-				// 	for(size_t col = 0; col < 7; col++)
-				// 	(matrix + i*rows + 0)->col[col] = WHITE[col];
-				// 	}
-				}	
-			(matrix + i*rows + 0)->val = (column[i].is_blank || column[i].index < column[i].padding) ? 32 : (rand()%(127-33))+33;
-			for(size_t col = 0; col < 8; col++){
-					(matrix + i*rows + 0)->col[col] = GREEN[col];
-				}
 
-			if(column[i].index == column[i].padding){
-				for(size_t col = 0; col < 8; col++){
-					(matrix + i*rows + 0)->col[col] = WHITE[col];
+				// Change the leading droplets character
+				if((matrix + i*rows + r-1)->val != 32 && (matrix + i*rows + r)->val == 32){
+					(matrix + i*rows + r-1)->val = (rand()%(127-33))+33;
 				}
 			}
 
+			// Add a new random val to top of column
+			(matrix + i*rows + 0)->val = (column[i].is_blank || column[i].index < column[i].padding) ? 32 : (rand()%(127-33))+33;
+
+			if(!column[i].is_blank){
+				// Change its color - this is pretty fucking hacky
+				for(size_t col = 0; col < 8; col++){
+					(matrix + i*rows + 0)->col[col] = CYAN[col];
+				}
+
+				// Change the bottom-of-the-droplet color to HEAD_COLOR and change its value
+				if(column[i].index == column[i].padding){
+					for(size_t col = 0; col < 8; col++){
+						(matrix + i*rows + 0)->col[col] = WHITE[col];
+					}
+				}
+			}
+
+			// Once we reach the end, reshuffle the column with new values
 			if(column[i].index == column[i].length){
 				set_col(&column[i], rows);
 			}
