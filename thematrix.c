@@ -39,6 +39,16 @@
 -------------------- MR. WORLD WIDE -----------------
 -------------------------------------------------- */
 
+// Los colores
+static const char RED[] 	= "\e[31m";
+static const char BLACK[] 	= "\e[30m";
+static const char GREEN[] 	= "\e[32m";
+static const char YELLOW[] 	= "\e[33m";
+static const char BLUE[] 	= "\e[34m";
+static const char MAGENTA[] = "\e[35m";
+static const char CYAN[] 	= "\e[36m";
+static const char WHITE[] 	= "\e[97m";
+
 // Data struct for each column
 struct Column{
 	int speed;		// How many ticks until a letter appears
@@ -47,6 +57,12 @@ struct Column{
 	int padding;	// How many leading " " are in the string
 	int length;		// Determines the length of the "droplet" string
 	bool is_blank;	// Is the "droplet" string blank or regular?
+};
+
+// Data struct of The Matrix, which holds value and color data
+struct Matrix{
+	int val;
+	char col[7];
 };
 
 // For debugging
@@ -64,13 +80,13 @@ void write_col(struct Column* column, int i);
 
 void write_all_cols(struct Column* columns, int cols);
 
-void move_matrix(int* matrix, int cols, int rows);
+void move_matrix(struct Matrix* matrix, int cols, int rows);
 
-void print_matrix(int* matrix, int cols, int rows);
+void print_matrix(struct Matrix* matrix, int cols, int rows);
 
-void move_cols(struct Column* column, int* matrix, int cols, int rows);
+void move_cols(struct Column* column, struct Matrix* matrix, int cols, int rows);
 
-void randomizer(int* matrix, int cols, int rows);
+void randomizer(struct Matrix* matrix, int cols, int rows);
 
 /* --------------------------------------------------
 ------------------------- MAIN ----------------------
@@ -92,11 +108,14 @@ int main(int argc, char* argv[]){
 	struct Column columns[COLS];
 	
 	// THE MATRIX
-	int thematrix[COLS][ROWS];
+	struct Matrix thematrix[COLS][ROWS];
 	// Set the matrix to all " "
 	for(size_t i = 0; i < ROWS; i++){
 		for(size_t j = 0; j < COLS; j++){
-			thematrix[j][i] = 32; // 32 = " "
+			thematrix[j][i].val = 32; // 32 = " "
+			for(size_t k = 0; k < 8; k++){
+				thematrix[j][i].col[k] = GREEN[k];
+			}
 		}
 
 	}
@@ -112,7 +131,7 @@ int main(int argc, char* argv[]){
 		system("clear");
 		print_matrix(thematrix[0], COLS, ROWS);	
 		move_cols(columns, thematrix[0], COLS, ROWS);
-		randomizer(thematrix[0], COLS, ROWS);
+		// randomizer(thematrix[0], COLS, ROWS);
 		system("sleep 0.1");
 	}
 
@@ -128,7 +147,7 @@ void set_col(struct Column* column, int rows){
 	column->tick		= 0;
 	column->index		= 0;
 	column->length 		= rand()%(2*rows) + 5;
-	column->padding		= rand()%(column->length/2) + 1;
+	column->padding		= rand()%(column->length/2) + 2;
 	column->is_blank 	= (rand()%10 < 6) ? true : false;
 }
 
@@ -151,7 +170,7 @@ void write_all_cols(struct Column* columns, int cols){
 	fclose(f);
 }
 
-void move_cols(struct Column* column, int* matrix, int cols, int rows){
+void move_cols(struct Column* column, struct Matrix* matrix, int cols, int rows){
 	for(size_t i = 0; i < cols; i++){
 		
 		column[i].tick++;
@@ -162,8 +181,22 @@ void move_cols(struct Column* column, int* matrix, int cols, int rows){
 
 			for(size_t r = rows; r > 1; r--){
 				*(matrix + i*rows + r-1) = *(matrix + i*rows + (r-2));
+				// *(matrix + i*rows + r-1).val = *(matrix + i*rows + (r-2)).;
+				// if(column[i].index == column[i].padding+1){
+				// 	for(size_t col = 0; col < 7; col++)
+				// 	(matrix + i*rows + 0)->col[col] = WHITE[col];
+				// 	}
+				}	
+			(matrix + i*rows + 0)->val = (column[i].is_blank || column[i].index < column[i].padding) ? 32 : (rand()%(127-33))+33;
+			for(size_t col = 0; col < 8; col++){
+					(matrix + i*rows + 0)->col[col] = GREEN[col];
+				}
+
+			if(column[i].index == column[i].padding){
+				for(size_t col = 0; col < 8; col++){
+					(matrix + i*rows + 0)->col[col] = WHITE[col];
+				}
 			}
-			*(matrix + i*rows + 0) = (column[i].is_blank || column[i].index < column[i].padding) ? 32 : (rand()%(127-33))+33;
 
 			if(column[i].index == column[i].length){
 				set_col(&column[i], rows);
@@ -178,16 +211,16 @@ void move_cols(struct Column* column, int* matrix, int cols, int rows){
 2 6 10
 3 7 11
 */
-void print_matrix(int* matrix, int cols, int rows){
+void print_matrix(struct Matrix* matrix, int cols, int rows){
 	for(size_t r = 0; r < rows; r++){
 		for(size_t c = 0; c < cols; c++){
-			printf("%c", *(matrix + c*rows + r));
+			printf("%s%c", (matrix + c*rows + r)->col, (matrix + c*rows + r)->val);
 		}
 		printf("\n");
 	}
 }
 
-void move_matrix(int* matrix, int cols, int rows){
+void move_matrix(struct Matrix* matrix, int cols, int rows){
 	for(size_t r = rows; r > 1; r--){
 		for(size_t c = 0; c < cols; c++){
 			*(matrix + c*rows + r-1) = *(matrix + c*rows + (r-2));
@@ -195,12 +228,19 @@ void move_matrix(int* matrix, int cols, int rows){
 	}
 }
 
-void randomizer(int* matrix, int cols, int rows){
+void randomizer(struct Matrix* matrix, int cols, int rows){
 	for(size_t i = 0; i < rand()%(cols*rows/2); i++){
 		int x = rand()%(cols+1);
 		int y = rand()%(rows+1);
-		if(*(matrix + y*rows + x) != 32){
-			*(matrix + y*rows + x) = (rand()%(127-33))+33;
+		if((matrix + y*rows + x)->val != 32){
+			(matrix + y*rows + x)->val = (rand()%(127-33))+33;
 		}
 	}	
 }
+
+
+// void set_col(int* matrix, int cols, int rows){
+// 	for(size_t i = 0; i < 7; i++){
+// 		*(matrix + y*rows + x).col[i] = 
+// 	}
+// }
