@@ -130,7 +130,9 @@ int main(int argc, char* argv[]){
 		print_matrix(thematrix[0], COLS, ROWS);	
 		move_cols(columns, thematrix[0], COLS, ROWS);
 		randomizer(thematrix[0], COLS, ROWS);
-		system("sleep 0.1");
+		// SLOWEST : 150000
+		// FASTEST : 60000
+		usleep(60000);
 	}
 
 	return 0;
@@ -144,8 +146,8 @@ void set_col(struct Column* column, int rows){
 	column->speed		= rand()%3 + 1;
 	column->tick		= 0;
 	column->index		= 0;
-	column->length 		= rand()%(2*rows) + 5;
-	column->padding		= rand()%(column->length/2) + 2;
+	column->length 		= rand()%(int)(0.8*rows) + 3;
+	column->padding		= rand()%(int)(0.5*rows) + 3;
 	column->is_blank 	= (rand()%10 < 6) ? true : false;
 }
 
@@ -179,7 +181,7 @@ void move_cols(struct Column* column, struct Matrix* matrix, int cols, int rows)
 
 			// Add a new random val to top of column
 			// Second value doesn't really matter as long as it's a valid ascii character.
-			(matrix + i*rows + 0)->val = (column[i].is_blank || column[i].index < column[i].padding) ? 32 : 33;
+			(matrix + i*rows + 0)->val = (column[i].is_blank || column[i].index <= column[i].padding) ? 32 : 33;
 
 			// Move the column down one position
 			for(size_t r = rows; r > 1; r--){
@@ -205,7 +207,7 @@ void move_cols(struct Column* column, struct Matrix* matrix, int cols, int rows)
 			}
 
 			// Once we reach the end, reshuffle the column with new values
-			if(column[i].index == column[i].length){
+			if(column[i].index == column[i].padding+column[i].length){
 				set_col(&column[i], rows);
 			}
 		} 
