@@ -51,6 +51,9 @@ static const char MAGENTA[] = "\e[35m";
 static const char CYAN[] 	= "\e[36m";
 static const char WHITE[] 	= "\e[97m";
 
+char HEAD_COL[7];
+char TAIL_COL[7];
+
 // Data struct for each column
 struct Column{
 	int speed;		// How many ticks until a letter appears
@@ -86,7 +89,7 @@ void print_matrix(struct Matrix* matrix, int cols, int rows);
 
 void move_cols(struct Column* column, struct Matrix* matrix, int cols, int rows);
 
-void randomizer(struct Matrix* matrix, int cols, int rows);
+void set_color(char* head, char* tail);
 
 /* --------------------------------------------------
 ------------------------- MAIN ----------------------
@@ -98,6 +101,9 @@ int main(int argc, char* argv[]){
 
 	// Set rand seed
 	srand(time(0));
+
+	// Set colors
+	set_color(argv[3], argv[4]);
 
 	// Sets COLS and ROWS to command line arguments. 
 	// strtol(string, endpointer, base);
@@ -129,7 +135,7 @@ int main(int argc, char* argv[]){
 		system("clear");
 		print_matrix(thematrix[0], COLS, ROWS);	
 		move_cols(columns, thematrix[0], COLS, ROWS);
-		randomizer(thematrix[0], COLS, ROWS);
+		// randomizer(thematrix[0], COLS, ROWS);
 		// SLOWEST : 150000
 		// FASTEST : 60000
 		usleep(60000);
@@ -194,15 +200,21 @@ void move_cols(struct Column* column, struct Matrix* matrix, int cols, int rows)
 				if(current_blank && !(above_blank)){
 					(matrix + i*rows + r-1)->val = (rand()%(127-33))+33;
 					// Sets new head color and previous head to body color
-					strcpy((matrix + i*rows + r-1)->col, WHITE);
-					strcpy((matrix + i*rows + r-2)->col, CYAN);
+					strcpy((matrix + i*rows + r-1)->col, HEAD_COL);
+					strcpy((matrix + i*rows + r-2)->col, TAIL_COL);
 				// Removes last character of string
 				} else if(!(current_blank) && above_blank){
 					(matrix + i*rows + r-1)->val = 32;
+				} else if(!(current_blank)){
+					int randint = rand()%10;
+					if(randint < 5){
+						(matrix + i*rows + r-1)->val = (rand()%(127-33))+33;
+					}
 				}
+				
 				// Prevents head from staying head color when it reaches the bottom
 				if(r == rows){
-					strcpy((matrix + i*rows + r-1)->col, CYAN);
+					strcpy((matrix + i*rows + r-1)->col, TAIL_COL);
 				}
 			}
 
@@ -229,12 +241,42 @@ void print_matrix(struct Matrix* matrix, int cols, int rows){
 	}
 }
 
-void randomizer(struct Matrix* matrix, int cols, int rows){
-	for(size_t i = 0; i < rand()%(cols*rows/2); i++){
-		int x = rand()%(cols+1);
-		int y = rand()%(rows+1);
-		if((matrix + y*rows + x)->val != 32){
-			(matrix + y*rows + x)->val = (rand()%(127-33))+33;
-		}
-	}	
+void set_color(char* head, char* tail){
+	// Set head color
+	if(strcmp(head, "WHITE") == 0){
+		strcpy(HEAD_COL, WHITE);
+	} else if(strcmp(head, "BLACK") == 0){
+		strcpy(HEAD_COL, BLACK);
+	}else if(strcmp(head, "GREEN") == 0){
+		strcpy(HEAD_COL, GREEN);
+	}else if(strcmp(head, "YELLOW") == 0){
+		strcpy(HEAD_COL, YELLOW);
+	}else if(strcmp(head, "BLUE") == 0){
+		strcpy(HEAD_COL, BLUE);
+	}else if(strcmp(head, "MAGENTA") == 0){
+		strcpy(HEAD_COL, MAGENTA);
+	}else if(strcmp(head, "CYAN") == 0){
+		strcpy(HEAD_COL, CYAN);
+	}else if(strcmp(head, "RED") == 0){
+		strcpy(HEAD_COL, RED);
+	}
+
+	// Set tail color
+	if(strcmp(tail, "WHITE") == 0){
+		strcpy(TAIL_COL, WHITE);
+	} else if(strcmp(tail, "BLACK") == 0){
+		strcpy(TAIL_COL, BLACK);
+	}else if(strcmp(tail, "GREEN") == 0){
+		strcpy(TAIL_COL, GREEN);
+	}else if(strcmp(tail, "YELLOW") == 0){
+		strcpy(TAIL_COL, YELLOW);
+	}else if(strcmp(tail, "BLUE") == 0){
+		strcpy(TAIL_COL, BLUE);
+	}else if(strcmp(tail, "MAGENTA") == 0){
+		strcpy(TAIL_COL, MAGENTA);
+	}else if(strcmp(tail, "CYAN") == 0){
+		strcpy(TAIL_COL, CYAN);
+	}else if(strcmp(tail, "RED") == 0){
+		strcpy(TAIL_COL, RED);
+	}
 }
