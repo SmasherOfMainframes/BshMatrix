@@ -41,6 +41,18 @@
 -------------------- MR. WORLD WIDE -----------------
 -------------------------------------------------- */
 
+// CHARACTERS
+// This is the characterset to be printed, the first entry MUST be " ".
+// The second dimension size must be able to accomadate biggest unicode 
+// symbol (+1 for /0).
+const char charset[][4] = {
+	" ","0","1","2","3","4","5","6","7","8","9",":",".","=","*",
+	"+","-","¦","|","_","ｦ","ｱ","ｳ","ｴ","ｵ","ｶ","ｷ","ｹ","ｺ","ｻ",
+	"ｼ","ｽ","ｾ","ｿ","ﾀ","ﾂ","ﾃ","ﾅ","ﾆ","ﾇ","ﾈ","ﾊ","ﾋ","ﾎ","ﾏ",
+	"ﾐ","ﾑ","ﾒ","ﾓ","ﾔ","ﾕ","ﾗ","ﾘ","ﾜ"
+};
+const int charset_len = sizeof(charset)/sizeof(charset[0]);
+
 // Los colores
 static const char RED[] 	= "\e[31m";
 static const char BLACK[] 	= "\e[30m";
@@ -56,7 +68,7 @@ char TAIL_COL[7];
 
 // Data struct for each column
 struct Column{
-	int speed;		// How many ticks until a letter appears
+	unsigned int speed;		// How many ticks until a letter appears
 	int tick;		// Keeps track of time for each column
 	int index;		// How far along length the column is
 	int padding;	// How many leading " " are in the string
@@ -118,7 +130,7 @@ int main(int argc, char* argv[]){
 	// Set the matrix to all " "
 	for(size_t i = 0; i < ROWS; i++){
 		for(size_t j = 0; j < COLS; j++){
-			thematrix[j][i].val = 32; // 32 = " "
+			thematrix[j][i].val = 0;
 			strcpy(thematrix[j][i].col, CYAN);
 		}
 
@@ -135,7 +147,6 @@ int main(int argc, char* argv[]){
 		system("clear");
 		print_matrix(thematrix[0], COLS, ROWS);	
 		move_cols(columns, thematrix[0], COLS, ROWS);
-		// randomizer(thematrix[0], COLS, ROWS);
 		// SLOWEST : 150000
 		// FASTEST : 60000
 		usleep(60000);
@@ -187,28 +198,31 @@ void move_cols(struct Column* column, struct Matrix* matrix, int cols, int rows)
 
 			// Add a new random val to top of column
 			// Second value doesn't really matter as long as it's a valid ascii character.
-			(matrix + i*rows + 0)->val = (column[i].is_blank || column[i].index <= column[i].padding) ? 32 : 33;
+			(matrix + i*rows + 0)->val = (column[i].is_blank || column[i].index <= column[i].padding) ? 0 : (rand()%(charset_len-1)) + 1;
 
 			// Move the column down one position
 			for(size_t r = rows; r > 1; r--){
 				
-				bool below_blank = ((matrix + i*rows + r)->val == 32) ? true : false;
-				bool current_blank = ((matrix + i*rows + r-1)->val == 32) ? true : false;
-				bool above_blank = ((matrix + i*rows + r-2)->val == 32) ? true : false;
+				bool current_blank = ((matrix + i*rows + r-1)->val == 0) ? true : false;
+				bool above_blank = ((matrix + i*rows + r-2)->val == 0) ? true : false;
 				
 				// Adds a new random character one below the falling string
 				if(current_blank && !(above_blank)){
-					(matrix + i*rows + r-1)->val = (rand()%(127-33))+33;
-					// Sets new head color and previous head to body color
+					(matrix + i*rows + r-1)->val = (rand()%(charset_len-1)) + 1;
+					// Sets new head color to head color and previous head to body color
 					strcpy((matrix + i*rows + r-1)->col, HEAD_COL);
 					strcpy((matrix + i*rows + r-2)->col, TAIL_COL);
+				
 				// Removes last character of string
 				} else if(!(current_blank) && above_blank){
-					(matrix + i*rows + r-1)->val = 32;
+					(matrix + i*rows + r-1)->val = 0;
+				
+				// Changes half of the of all non-blank values to a new value
+				// for some added randomness.
 				} else if(!(current_blank)){
 					int randint = rand()%10;
 					if(randint < 5){
-						(matrix + i*rows + r-1)->val = (rand()%(127-33))+33;
+						(matrix + i*rows + r-1)->val = (rand()%(charset_len-1)) + 1;
 					}
 				}
 				
@@ -235,7 +249,7 @@ void move_cols(struct Column* column, struct Matrix* matrix, int cols, int rows)
 void print_matrix(struct Matrix* matrix, int cols, int rows){
 	for(size_t r = 0; r < rows; r++){
 		for(size_t c = 0; c < cols; c++){
-			printf("%s%c", (matrix + c*rows + r)->col, (matrix + c*rows + r)->val);
+			printf("%s%s", (matrix + c*rows + r)->col, charset[(matrix + c*rows + r)->val]);
 		}
 		printf("\n");
 	}
