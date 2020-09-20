@@ -4,6 +4,7 @@
 #include <time.h>		// srand(time(0))
 #include <stdbool.h>	// BOOL
 #include <string.h>		// strcmp
+#include <ncurses.h>
 
 /* How does this trash work?
  *
