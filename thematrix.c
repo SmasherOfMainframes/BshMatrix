@@ -55,16 +55,6 @@ const char charset[][4] = {
 };
 const int charset_len = sizeof(charset)/sizeof(charset[0]);
 
-// Los colores
-static const char RED[] 	= "\e[31m";
-static const char BLACK[] 	= "\e[30m";
-static const char GREEN[] 	= "\e[32m";
-static const char YELLOW[] 	= "\e[33m";
-static const char BLUE[] 	= "\e[34m";
-static const char MAGENTA[] = "\e[35m";
-static const char CYAN[] 	= "\e[36m";
-static const char WHITE[] 	= "\e[97m";
-
 char HEAD_COL[7];
 char TAIL_COL[7];
 
@@ -84,9 +74,6 @@ struct Matrix{
 	char col[7];
 };
 
-// For debugging
-FILE * f;
-
 /* --------------------------------------------------
 ---------------------- PROTOTYPES -------------------
 -------------------------------------------------- */
@@ -94,12 +81,6 @@ FILE * f;
 void set_col(struct Column* col, int rows);
 
 void set_all_cols(struct Column* column, int cols, int rows);
-
-void write_col(struct Column* column, int i);
-
-void write_all_cols(struct Column* columns, int cols);
-
-void print_matrix(struct Matrix* matrix, int cols, int rows);
 
 void move_cols(struct Column* column, struct Matrix* matrix, int cols, int rows);
 
@@ -114,24 +95,25 @@ int main(int argc, char* argv[]){
 
 	// ncurses init
 	initscr();	
-
-	f = fopen("the_matrix", "w");
-	fclose(f);
+	start_color();
+	use_default_colors();	// allows transparent background
+	curs_set(0);			// turns off cursor
 
 	// Set rand seed
 	srand(time(0));
 
 	// Set colors
 	// set_color(argv[3], argv[4]);
-	set_color("WHITE", "GREEN");
+	set_color("WHITE", "MAGENTA");
 
 	// Sets COLS and ROWS to command line arguments. 
 	// strtol(string, endpointer, base);
 	// const int COLS = strtol(argv[1], NULL, 10);
 	// const int ROWS = strtol(argv[2], NULL, 10);
-	const int COLS = 20;
-	const int ROWS = 15;
-	
+	int COLS;
+	int ROWS;
+	getmaxyx(stdscr, ROWS, COLS);
+	// getmaxyx(stdscr, ROWS, COLS);
 	// Array of Column structs, used to get column-specific data
 	struct Column columns[COLS];
 	
@@ -141,7 +123,6 @@ int main(int argc, char* argv[]){
 	for(size_t i = 0; i < ROWS; i++){
 		for(size_t j = 0; j < COLS; j++){
 			thematrix[j][i].val = 0;
-			strcpy(thematrix[j][i].col, CYAN);
 		}
 
 	}
@@ -149,17 +130,12 @@ int main(int argc, char* argv[]){
 	// Initialize the starting values of each column.
 	set_all_cols(columns, COLS, ROWS);
 
-	// write_all_cols(columns, COLS);		// For debugging
-
 	// ------ MAIN LOOP -------- //
 
 	while(1){
-		print_matrix(thematrix[0], COLS, ROWS);	
-		refresh();
 		move_cols(columns, thematrix[0], COLS, ROWS);
-		// SLOWEST : 150000
-		// FASTEST : 60000
-		usleep(40000);
+		refresh();
+		usleep(15000);
 	}
 	
 	endwin();
@@ -171,7 +147,7 @@ int main(int argc, char* argv[]){
 -------------------------------------------------- */
 
 void set_col(struct Column* column, int rows){
-	column->speed		= rand()%3 + 1;
+	column->speed		= rand()%3 + 2;
 	column->tick		= 0;
 	column->index		= 0;
 	column->length 		= rand()%(int)(0.8*rows) + 3;
@@ -183,19 +159,6 @@ void set_all_cols(struct Column* column, int cols, int rows){
 	for(size_t i = 0; i < cols; i++){
 		set_col(&column[i], rows);
 	}
-}
-
-void write_col(struct Column* column, int i){
-	fprintf(f, "Col %d, Speed %d, Tick %d, Index %d, Length %d, Isblank %d\n", 
-			(int)i, column[i].speed, column[i].tick, column[i].index, column[i].length, column[i].is_blank);
-}
-
-void write_all_cols(struct Column* columns, int cols){
-	f = fopen("the_matrix", "a");
-	for(size_t i = 0; i < cols; i++){
-		write_col(columns, i);
-	}
-	fclose(f);
 }
 
 void move_cols(struct Column* column, struct Matrix* matrix, int cols, int rows){
@@ -210,36 +173,47 @@ void move_cols(struct Column* column, struct Matrix* matrix, int cols, int rows)
 			// Add a new random val to top of column
 			// Second value doesn't really matter as long as it's a valid ascii character.
 			(matrix + i*rows + 0)->val = (column[i].is_blank || column[i].index <= column[i].padding) ? 0 : (rand()%(charset_len-1)) + 1;
-
+			mvprintw(0, i, "%s", charset[(matrix + i*rows + 0)->val]);
+			
 			// Move the column down one position
 			for(size_t r = rows; r > 1; r--){
 				
 				bool current_blank = ((matrix + i*rows + r-1)->val == 0) ? true : false;
 				bool above_blank = ((matrix + i*rows + r-2)->val == 0) ? true : false;
 				
-				// Adds a new random character one below the falling string
 				if(current_blank && !(above_blank)){
+					// Adds a new random character one below the falling string, then prints
 					(matrix + i*rows + r-1)->val = (rand()%(charset_len-1)) + 1;
+					attron(COLOR_PAIR(1));
+					mvprintw(r-1, i, "%s", charset[(matrix + i*rows + r-1)->val]);
+
+					attron(COLOR_PAIR(2));
+					mvprintw(r-2, i, "%s", charset[(matrix + i*rows + r-2)->val]);
+
 					// Sets new head color to head color and previous head to body color
-					strcpy((matrix + i*rows + r-1)->col, HEAD_COL);
-					strcpy((matrix + i*rows + r-2)->col, TAIL_COL);
+					// strcpy((matrix + i*rows + r-1)->col, HEAD_COL);
+					// strcpy((matrix + i*rows + r-2)->col, TAIL_COL);
 				
 				// Removes last character of string
 				} else if(!(current_blank) && above_blank){
 					(matrix + i*rows + r-1)->val = 0;
+					mvprintw(r-1, i, "%s", charset[(matrix + i*rows + r-1)->val]);
 				
-				// Changes half of the of all non-blank values to a new value
+				// Changes some of the non-blank values to a new value
 				// for some added randomness.
 				} else if(!(current_blank)){
 					int randint = rand()%10;
-					if(randint < 5){
+					if(randint < 2){
 						(matrix + i*rows + r-1)->val = (rand()%(charset_len-1)) + 1;
+						attron(COLOR_PAIR(2));
+						mvprintw(r-1, i, "%s", charset[(matrix + i*rows + r-1)->val]);
 					}
 				}
 				
 				// Prevents head from staying head color when it reaches the bottom
 				if(r == rows){
-					strcpy((matrix + i*rows + r-1)->col, TAIL_COL);
+					// strcpy((matrix + i*rows + r-1)->col, TAIL_COL);
+					// attron
 				}
 			}
 
@@ -251,59 +225,42 @@ void move_cols(struct Column* column, struct Matrix* matrix, int cols, int rows)
 	}
 }
 
-/*
-0 4 8
-1 5 9
-2 6 10
-3 7 11
-*/
-void print_matrix(struct Matrix* matrix, int cols, int rows){
-	for(size_t r = 0; r < rows; r++){
-		for(size_t c = 0; c < cols; c++){
-			// printf("%s%s", (matrix + c*rows + r)->col, charset[(matrix + c*rows + r)->val]);
-			mvprintw(r, c, "%s", charset[(matrix + c*rows + r)->val]);
-			// mvprintw(r, c, "%s", charset[24]);
-		}
-		// printf("\n");
-	}
-}
-
 void set_color(char* head, char* tail){
 	// Set head color
 	if(strcmp(head, "WHITE") == 0){
-		strcpy(HEAD_COL, WHITE);
+		init_pair(1, 7, -1);
 	} else if(strcmp(head, "BLACK") == 0){
-		strcpy(HEAD_COL, BLACK);
+		init_pair(1, 0, -1);
 	}else if(strcmp(head, "GREEN") == 0){
-		strcpy(HEAD_COL, GREEN);
+		init_pair(1, 2, -1);
 	}else if(strcmp(head, "YELLOW") == 0){
-		strcpy(HEAD_COL, YELLOW);
+		init_pair(1, 3, -1);
 	}else if(strcmp(head, "BLUE") == 0){
-		strcpy(HEAD_COL, BLUE);
+		init_pair(1, 4, -1);
 	}else if(strcmp(head, "MAGENTA") == 0){
-		strcpy(HEAD_COL, MAGENTA);
+		init_pair(1, 5, -1);
 	}else if(strcmp(head, "CYAN") == 0){
-		strcpy(HEAD_COL, CYAN);
+		init_pair(1, 6, -1);
 	}else if(strcmp(head, "RED") == 0){
-		strcpy(HEAD_COL, RED);
+		init_pair(1, 1, -1);
 	}
 
 	// Set tail color
 	if(strcmp(tail, "WHITE") == 0){
-		strcpy(TAIL_COL, WHITE);
+		init_pair(2, 7, -1);
 	} else if(strcmp(tail, "BLACK") == 0){
-		strcpy(TAIL_COL, BLACK);
+		init_pair(2, 0, -1);
 	}else if(strcmp(tail, "GREEN") == 0){
-		strcpy(TAIL_COL, GREEN);
+		init_pair(2, 2, -1);
 	}else if(strcmp(tail, "YELLOW") == 0){
-		strcpy(TAIL_COL, YELLOW);
+		init_pair(2, 3, -1);
 	}else if(strcmp(tail, "BLUE") == 0){
-		strcpy(TAIL_COL, BLUE);
+		init_pair(2, 4, -1);
 	}else if(strcmp(tail, "MAGENTA") == 0){
-		strcpy(TAIL_COL, MAGENTA);
+		init_pair(2, 5, -1);
 	}else if(strcmp(tail, "CYAN") == 0){
-		strcpy(TAIL_COL, CYAN);
+		init_pair(2, 6, -1);
 	}else if(strcmp(tail, "RED") == 0){
-		strcpy(TAIL_COL, RED);
+		init_pair(2, 1, -1);
 	}
 }
