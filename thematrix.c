@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <stdlib.h>		// strtol
 #include <unistd.h>		// usleep()
 #include <time.h>		// srand(time(0))
@@ -7,7 +6,16 @@
 #include <locale.h>		// for setting locale
 #include <ncursesw/ncurses.h>
 
-/* How does this trash work?
+/* TODO:
+ * 0. Add sys args for...
+ 		Head/tail color
+ 		Emptiness
+ 		Speed
+ 		Random value changing
+ * 1. Turn the Matrix struct into a simple array.
+ * 2. Apply Clean Code (TM) to the move_col functions
+ *
+ * HOW DOES THIS TRASH WORK???
  *
  * The Matrix is mainly built up of structs called Column. Each Column struct holds
  * data on the column of the matrix. 
@@ -20,22 +28,23 @@
  * Every time INDEX is incremented, the top row of The Matrix is fed a new character.
  * What character appears depends on whether the IS_BLANK attribute is true or false.
  * If true, then every time INDEX is increased, a " " or int value 32 is added to the
- * Matrix. If false, then a random ascii-mapped value is added to the head of the 
- * falling string, or, if INDEX is currently less than the value of PADDING, a " " or 
- * 32 is added.
+ * Matrix. If false, then a random value (1 <= n < charset size) is added to the head of the 
+ * falling string, or, if INDEX is currently less than the value of PADDING, a " " is added.
  * 
  * Padding refers to how many leading zeroes will be added before the regular 
  * characters are added. This prevents long, continuous strings from displaying.
  *
- * Also, whenever INDEX is incremented, starting from the bottom of the Column, values
- * are copied down from the very bottom to the second-from-the-top row. This is what 
- * causes the strings to "fall" down the matrix.
+ * Also, whenever INDEX is incremented, a new value is added to the bottom of the droplet,
+ * and the top value is replaced with " ". This keeps values in place while the droplet falls.
  *
  * This continues until INDEX reaches the value LENGTH. When this happens, the Column
- * struct is reshuffled with new, randomized values.
+ * struct is reshuffled with new, randomized values and the current droplet will continue
+ * to fall down while a new one starts at the top of the column.
  *
  * Finally, a random number of non-" " characters are selected to be changed to a new
  * value, to give the falling strings some fun randomness.
+ * 
+ * UPDATED : Sept 20 2020, 5am
  *
  */
 
@@ -55,23 +64,21 @@ const char charset[][4] = {
 };
 const int charset_len = sizeof(charset)/sizeof(charset[0]);
 
-char HEAD_COL[7];
-char TAIL_COL[7];
-
 // Data struct for each column
 struct Column{
-	unsigned int speed;		// How many ticks until a letter appears
-	int tick;		// Keeps track of time for each column
-	int index;		// How far along length the column is
-	int padding;	// How many leading " " are in the string
-	int length;		// Determines the length of the "droplet" string
-	bool is_blank;	// Is the "droplet" string blank or regular?
+	unsigned int speed;		// How many ticks until the droplet falls
+	int tick;				// Keeps track of time for each column
+	int index;				// How many times has tick reached index
+	int padding;			// How many leading " " are in the string
+	int length;				// Determines the length of the "droplet" string
+	bool is_blank;			// Is the "droplet" string blank or regular?
 };
 
-// Data struct of The Matrix, which holds value and color data
+// Data struct of The Matrix, which holds value
+// This should be replaced by a simple matrix, it used
+// to hold color data aswell. But alas, i don't wanna.
 struct Matrix{
 	int val;
-	char col[7];
 };
 
 /* --------------------------------------------------
@@ -86,36 +93,37 @@ void move_cols(struct Column* column, struct Matrix* matrix, int cols, int rows)
 
 void set_color(char* head, char* tail);
 
+int is_keypressed();
+
 /* --------------------------------------------------
 ------------------------- MAIN ----------------------
 -------------------------------------------------- */
 
 int main(int argc, char* argv[]){
+	// Needed for unicode support
 	setlocale(LC_ALL, "en_CA.UTF-8");
 
-	// ncurses init
+	// ncurses init stuff
 	initscr();	
 	start_color();
 	use_default_colors();	// allows transparent background
 	curs_set(0);			// turns off cursor
+	nodelay(stdscr, TRUE);	// Turns getch() into a non-blocking call, allows key press to quit
 
-	// Set rand seed
 	srand(time(0));
 
-	// Set colors
-	// set_color(argv[3], argv[4]);
-	set_color("WHITE", "MAGENTA");
+	set_color("WHITE", "MAGENTA");	// Head color, tail color
 
-	// Sets COLS and ROWS to command line arguments. 
-	// strtol(string, endpointer, base);
-	// const int COLS = strtol(argv[1], NULL, 10);
-	// const int ROWS = strtol(argv[2], NULL, 10);
+	// Using built in ncurses function to get the terminal size, 
+	// which is needed for program logic.
 	int COLS;
 	int ROWS;
 	getmaxyx(stdscr, ROWS, COLS);
-	// getmaxyx(stdscr, ROWS, COLS);
-	// Array of Column structs, used to get column-specific data
+
+	// Array of Column structs, used to hold column-specific data
 	struct Column columns[COLS];
+	// Initialize the starting values of each column.
+	set_all_cols(columns, COLS, ROWS);
 	
 	// THE MATRIX
 	struct Matrix thematrix[COLS][ROWS];
@@ -124,26 +132,23 @@ int main(int argc, char* argv[]){
 		for(size_t j = 0; j < COLS; j++){
 			thematrix[j][i].val = 0;
 		}
-
 	}
-	
-	// Initialize the starting values of each column.
-	set_all_cols(columns, COLS, ROWS);
 
 	// ------ MAIN LOOP -------- //
-
-	while(1){
+	while( !(is_keypressed()) ){
 		move_cols(columns, thematrix[0], COLS, ROWS);
 		refresh();
 		usleep(15000);
 	}
-	
+	// ------ MAIN LOOP -------- //
+
+	// Goodbye
 	endwin();
 	return 0;
 }
 
 /* --------------------------------------------------
----------------------- FUNK SHUNS -------------------
+---------------------- FONCTIONS --------------------
 -------------------------------------------------- */
 
 void set_col(struct Column* column, int rows){
@@ -162,6 +167,9 @@ void set_all_cols(struct Column* column, int cols, int rows){
 }
 
 void move_cols(struct Column* column, struct Matrix* matrix, int cols, int rows){
+	// why the fuck didnt you set var to c????????
+	// This function should be cleaned up and broken into smaller bits.
+	// Unlce Bob would bitch slap you for this.
 	for(size_t i = 0; i < cols; i++){
 		
 		column[i].tick++;
@@ -189,12 +197,8 @@ void move_cols(struct Column* column, struct Matrix* matrix, int cols, int rows)
 
 					attron(COLOR_PAIR(2));
 					mvprintw(r-2, i, "%s", charset[(matrix + i*rows + r-2)->val]);
-
-					// Sets new head color to head color and previous head to body color
-					// strcpy((matrix + i*rows + r-1)->col, HEAD_COL);
-					// strcpy((matrix + i*rows + r-2)->col, TAIL_COL);
 				
-				// Removes last character of string
+				// Sets last character of string to " "
 				} else if(!(current_blank) && above_blank){
 					(matrix + i*rows + r-1)->val = 0;
 					mvprintw(r-1, i, "%s", charset[(matrix + i*rows + r-1)->val]);
@@ -202,8 +206,8 @@ void move_cols(struct Column* column, struct Matrix* matrix, int cols, int rows)
 				// Changes some of the non-blank values to a new value
 				// for some added randomness.
 				} else if(!(current_blank)){
-					int randint = rand()%10;
-					if(randint < 2){
+					// int randint = rand()%10;
+					if(rand()%10 < 2){
 						(matrix + i*rows + r-1)->val = (rand()%(charset_len-1)) + 1;
 						attron(COLOR_PAIR(2));
 						mvprintw(r-1, i, "%s", charset[(matrix + i*rows + r-1)->val]);
@@ -212,13 +216,13 @@ void move_cols(struct Column* column, struct Matrix* matrix, int cols, int rows)
 				
 				// Prevents head from staying head color when it reaches the bottom
 				if(r == rows){
-					// strcpy((matrix + i*rows + r-1)->col, TAIL_COL);
-					// attron
+					attron(COLOR_PAIR(2));
+					mvprintw(r-1, i, "%s", charset[(matrix + i*rows + r-1)->val]);
 				}
 			}
 
 			// Once we reach the end, reshuffle the column with new values
-			if(column[i].index == column[i].padding+column[i].length){
+			if(column[i].index == column[i].padding + column[i].length){
 				set_col(&column[i], rows);
 			}
 		} 
@@ -226,6 +230,7 @@ void move_cols(struct Column* column, struct Matrix* matrix, int cols, int rows)
 }
 
 void set_color(char* head, char* tail){
+	// yanderedev has enetered the chat.
 	// Set head color
 	if(strcmp(head, "WHITE") == 0){
 		init_pair(1, 7, -1);
@@ -263,4 +268,17 @@ void set_color(char* head, char* tail){
 	}else if(strcmp(tail, "RED") == 0){
 		init_pair(2, 1, -1);
 	}
+	// yanderedev has left the chat.
+}
+
+int is_keypressed()
+{
+    int ch = getch();
+
+    if (ch != ERR) {
+        ungetch(ch);
+        return 1;
+    } else {
+        return 0;
+    }
 }
