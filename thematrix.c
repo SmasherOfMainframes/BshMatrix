@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>		// strtol
-#include <unistd.h>		
+#include <unistd.h>		// usleep()
 #include <time.h>		// srand(time(0))
 #include <stdbool.h>	// BOOL
 #include <string.h>		// strcmp
@@ -144,12 +144,12 @@ int main(int argc, char* argv[]){
 	// ------ MAIN LOOP -------- //
 
 	while(1){
-		system("clear");
+		system("clear"); // DISGUSTING
 		print_matrix(thematrix[0], COLS, ROWS);	
 		move_cols(columns, thematrix[0], COLS, ROWS);
 		// SLOWEST : 150000
 		// FASTEST : 60000
-		usleep(60000);
+		usleep(40000);
 	}
 
 	return 0;
