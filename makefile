@@ -2,7 +2,7 @@ CXX			= gcc
 
 CXXFLAGS 	= -g -Wall
 
-LIBS		= -lncurses
+LIBS		= -lncursesw
 
 OUTPUT		= thematrix
 OBJS		= thematrix.c

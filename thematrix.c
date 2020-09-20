@@ -4,7 +4,8 @@
 #include <time.h>		// srand(time(0))
 #include <stdbool.h>	// BOOL
 #include <string.h>		// strcmp
-#include <ncurses.h>
+#include <locale.h>		// for setting locale
+#include <ncursesw/ncurses.h>
 
 /* How does this trash work?
  *
@@ -109,6 +110,11 @@ void set_color(char* head, char* tail);
 -------------------------------------------------- */
 
 int main(int argc, char* argv[]){
+	setlocale(LC_ALL, "en_CA.UTF-8");
+
+	// ncurses init
+	initscr();	
+
 	f = fopen("the_matrix", "w");
 	fclose(f);
 
@@ -116,12 +122,15 @@ int main(int argc, char* argv[]){
 	srand(time(0));
 
 	// Set colors
-	set_color(argv[3], argv[4]);
+	// set_color(argv[3], argv[4]);
+	set_color("WHITE", "GREEN");
 
 	// Sets COLS and ROWS to command line arguments. 
 	// strtol(string, endpointer, base);
-	const int COLS = strtol(argv[1], NULL, 10);
-	const int ROWS = strtol(argv[2], NULL, 10);
+	// const int COLS = strtol(argv[1], NULL, 10);
+	// const int ROWS = strtol(argv[2], NULL, 10);
+	const int COLS = 20;
+	const int ROWS = 15;
 	
 	// Array of Column structs, used to get column-specific data
 	struct Column columns[COLS];
@@ -145,14 +154,15 @@ int main(int argc, char* argv[]){
 	// ------ MAIN LOOP -------- //
 
 	while(1){
-		system("clear"); // DISGUSTING
 		print_matrix(thematrix[0], COLS, ROWS);	
+		refresh();
 		move_cols(columns, thematrix[0], COLS, ROWS);
 		// SLOWEST : 150000
 		// FASTEST : 60000
 		usleep(40000);
 	}
-
+	
+	endwin();
 	return 0;
 }
 
@@ -250,9 +260,11 @@ void move_cols(struct Column* column, struct Matrix* matrix, int cols, int rows)
 void print_matrix(struct Matrix* matrix, int cols, int rows){
 	for(size_t r = 0; r < rows; r++){
 		for(size_t c = 0; c < cols; c++){
-			printf("%s%s", (matrix + c*rows + r)->col, charset[(matrix + c*rows + r)->val]);
+			// printf("%s%s", (matrix + c*rows + r)->col, charset[(matrix + c*rows + r)->val]);
+			mvprintw(r, c, "%s", charset[(matrix + c*rows + r)->val]);
+			// mvprintw(r, c, "%s", charset[24]);
 		}
-		printf("\n");
+		// printf("\n");
 	}
 }
 
