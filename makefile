@@ -4,8 +4,8 @@ CXXFLAGS 	= -g -Wall
 
 LIBS		= -lncursesw
 
-OUTPUT		= thematrix
-OBJS		= thematrix.c
+OUTPUT		= cRain
+OBJS		= cRain.c
 
 $(OUTPUT): $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) $(LIBS) -o $(OUTPUT)

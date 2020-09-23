@@ -7,12 +7,13 @@
 #include <ncursesw/ncurses.h>
 
 /* TODO:
- * 0. Add sys args for...
- 		Head/tail color
- 		Emptiness
- 		Speed
- 		Random value changing
- * 1. Turn the Matrix struct into a simple array.
+ * 0. Shouldn't need to hold values, should be able to read them from screen, should help memory usage
+ * 1. Add sys args for...
+ 		Mode (rain mode -mr, matrix mode (normal) -mmn, matrix mode (japanese char) -mmj
+		Head/tail color			-h COL -t COL
+ 		Fullness				-f (0% - 100%)
+ 		Speed					-s (0 - 1000000)
+ 		Random value changing	-r (0% - 100%)
  * 2. Apply Clean Code (TM) to the move_col functions
  *
  * HOW DOES THIS TRASH WORK???
