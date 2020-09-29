@@ -57,11 +57,23 @@
 // This is the characterset to be printed, the first entry MUST be " ".
 // The second dimension size must be able to accomadate biggest unicode 
 // symbol (+1 for /0).
+// const char charset[][4] = {
+// 	" ","0","1","2","3","4","5","6","7","8","9",":",".","=","*",
+// 	"+","-","¦","|","_","ｦ","ｱ","ｳ","ｴ","ｵ","ｶ","ｷ","ｹ","ｺ","ｻ",
+// 	"ｼ","ｽ","ｾ","ｿ","ﾀ","ﾂ","ﾃ","ﾅ","ﾆ","ﾇ","ﾈ","ﾊ","ﾋ","ﾎ","ﾏ",
+// 	"ﾐ","ﾑ","ﾒ","ﾓ","ﾔ","ﾕ","ﾗ","ﾘ","ﾜ"
+// };
+// const char charset[][4] = {
+// 	" ","0","1"
+// };
+// const char charset[][4] = {
+// 	" ","☻","☺"
+// };
 const char charset[][4] = {
-	" ","0","1","2","3","4","5","6","7","8","9",":",".","=","*",
-	"+","-","¦","|","_","ｦ","ｱ","ｳ","ｴ","ｵ","ｶ","ｷ","ｹ","ｺ","ｻ",
-	"ｼ","ｽ","ｾ","ｿ","ﾀ","ﾂ","ﾃ","ﾅ","ﾆ","ﾇ","ﾈ","ﾊ","ﾋ","ﾎ","ﾏ",
-	"ﾐ","ﾑ","ﾒ","ﾓ","ﾔ","ﾕ","ﾗ","ﾘ","ﾜ"
+" ","⠁","⠂","⠃","⠄","⠅","⠆","⠇","⠈","⠉","⠊","⠋","⠌","⠍","⠎","⠏","⠐","⠑","⠒",
+"⠓","⠔","⠕","⠖","⠗","⠘","⠙","⠚","⠛","⠜","⠝","⠞","⠟","⠠","⠡","⠢","⠣","⠤","⠥",
+"⠦","⠧","⠨","⠩","⠪","⠫","⠬","⠭","⠮","⠯","⠰","⠱","⠲","⠳","⠴","⠵","⠶","⠷","⠸",
+"⠹","⠺","⠻","⠼","⠽","⠾","⠿"
 };
 const int charset_len = sizeof(charset)/sizeof(charset[0]);
 
@@ -113,7 +125,7 @@ int main(int argc, char* argv[]){
 
 	srand(time(0));
 
-	set_color("WHITE", "MAGENTA");	// Head color, tail color
+	set_color("WHITE", "BLUE");	// Head color, tail color
 
 	// Using built in ncurses function to get the terminal size, 
 	// which is needed for program logic.
@@ -139,7 +151,7 @@ int main(int argc, char* argv[]){
 	while( !(is_keypressed()) ){
 		move_cols(columns, thematrix[0], COLS, ROWS);
 		refresh();
-		usleep(15000);
+		usleep(2500);
 	}
 	// ------ MAIN LOOP -------- //
 
@@ -153,7 +165,7 @@ int main(int argc, char* argv[]){
 -------------------------------------------------- */
 
 void set_col(struct Column* column, int rows){
-	column->speed		= rand()%3 + 2;
+	column->speed		= rand()%5 + 10;
 	column->tick		= 0;
 	column->index		= 0;
 	column->length 		= rand()%(int)(0.8*rows) + 3;
@@ -207,8 +219,7 @@ void move_cols(struct Column* column, struct Matrix* matrix, int cols, int rows)
 				// Changes some of the non-blank values to a new value
 				// for some added randomness.
 				} else if(!(current_blank)){
-					// int randint = rand()%10;
-					if(rand()%10 < 2){
+					if(rand()%10 == 0){
 						(matrix + i*rows + r-1)->val = (rand()%(charset_len-1)) + 1;
 						attron(COLOR_PAIR(2));
 						mvprintw(r-1, i, "%s", charset[(matrix + i*rows + r-1)->val]);
