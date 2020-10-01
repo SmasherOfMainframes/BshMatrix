@@ -69,13 +69,15 @@
 // const char charset[][4] = {
 // 	" ","☻","☺"
 // };
-const char charset[][4] = {
-" ","⠁","⠂","⠃","⠄","⠅","⠆","⠇","⠈","⠉","⠊","⠋","⠌","⠍","⠎","⠏","⠐","⠑","⠒",
-"⠓","⠔","⠕","⠖","⠗","⠘","⠙","⠚","⠛","⠜","⠝","⠞","⠟","⠠","⠡","⠢","⠣","⠤","⠥",
-"⠦","⠧","⠨","⠩","⠪","⠫","⠬","⠭","⠮","⠯","⠰","⠱","⠲","⠳","⠴","⠵","⠶","⠷","⠸",
-"⠹","⠺","⠻","⠼","⠽","⠾","⠿"
-};
-const int charset_len = sizeof(charset)/sizeof(charset[0]);
+// const char charset[][4] = {
+// " ","⠁","⠂","⠃","⠄","⠅","⠆","⠇","⠈","⠉","⠊","⠋","⠌","⠍","⠎","⠏","⠐","⠑","⠒",
+// "⠓","⠔","⠕","⠖","⠗","⠘","⠙","⠚","⠛","⠜","⠝","⠞","⠟","⠠","⠡","⠢","⠣","⠤","⠥",
+// "⠦","⠧","⠨","⠩","⠪","⠫","⠬","⠭","⠮","⠯","⠰","⠱","⠲","⠳","⠴","⠵","⠶","⠷","⠸",
+// "⠹","⠺","⠻","⠼","⠽","⠾","⠿"
+// };
+// const int charset_len = sizeof(charset)/sizeof(charset[0]);
+char charset[256][4];
+int charset_len = 1;
 
 // Data struct for each column
 struct Column{
@@ -125,7 +127,54 @@ int main(int argc, char* argv[]){
 
 	srand(time(0));
 
-	set_color("WHITE", "BLUE");	// Head color, tail color
+	////////////////////////////
+	////////////////////////////
+
+	FILE* fp = fopen("charsets", "r");
+	char buff_line[256];
+
+	charset[0][0] = ' ';
+	while(fgets(buff_line, 256, fp) != NULL){
+		char buff_name[64];
+		int idx = 0;
+		while(buff_line[idx] != ' '){
+			buff_name[idx] = buff_line[idx];
+			idx++;
+		}
+		buff_name[idx] = '\0';
+
+		idx++;
+
+		// printw("%c | ", buff_line[idx]);
+		// printw("%s\n", buff_name);
+
+		if(!strcmp(buff_name, argv[1])){
+			// LOOP THROUGH ALL CHARS
+			char buff_char[4];
+			int i = 0;
+			while(buff_line[idx-1] != '\0'){
+				if(buff_line[idx] == ' ' || buff_line[idx] == '\0'){
+					buff_char[i+1] = '\0';
+					idx++;
+					strcpy(charset[charset_len], buff_char);
+					charset_len++;
+					i = 0;
+					// printw("%s\n", buff_char);
+				} else {
+					buff_char[i] = buff_line[idx];
+					idx++;
+					i++;
+				}
+			}
+			charset_len--;	// lol why does this stabilize everything??
+			break;
+		}
+	}
+
+	////////////////////////////
+	////////////////////////////
+
+	set_color("WHITE", "RED");	// Head color, tail color
 
 	// Using built in ncurses function to get the terminal size, 
 	// which is needed for program logic.
