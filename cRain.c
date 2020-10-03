@@ -133,6 +133,13 @@ int main(int argc, char* argv[]){
 	FILE* fp = fopen("charsets", "r");
 	char buff_line[256];
 
+
+	// if(argv[1] != NULL){
+	// 	char MODE[] = argv[1];
+	// } else {
+	// 	char MODE[] = "BRAILLE";
+	// }
+
 	charset[0][0] = ' ';
 	while(fgets(buff_line, 256, fp) != NULL){
 		char buff_name[64];
@@ -145,36 +152,34 @@ int main(int argc, char* argv[]){
 
 		idx++;
 
-		// printw("%c | ", buff_line[idx]);
-		// printw("%s\n", buff_name);
-
 		if(!strcmp(buff_name, argv[1])){
 			// LOOP THROUGH ALL CHARS
 			char buff_char[4];
 			int i = 0;
 			while(buff_line[idx-1] != '\0'){
 				if(buff_line[idx] == ' ' || buff_line[idx] == '\0'){
-					buff_char[i+1] = '\0';
+					buff_char[i] = '\0';
 					idx++;
 					strcpy(charset[charset_len], buff_char);
 					charset_len++;
 					i = 0;
-					// printw("%s\n", buff_char);
 				} else {
 					buff_char[i] = buff_line[idx];
 					idx++;
 					i++;
 				}
 			}
-			charset_len--;	// lol why does this stabilize everything??
+			charset_len-=2;	// lol why does this stabilize everything??
 			break;
 		}
 	}
 
+
+
 	////////////////////////////
 	////////////////////////////
 
-	set_color("WHITE", "RED");	// Head color, tail color
+	set_color(argv[2], argv[3]);	// Head color, tail color
 
 	// Using built in ncurses function to get the terminal size, 
 	// which is needed for program logic.
@@ -242,7 +247,7 @@ void move_cols(struct Column* column, struct Matrix* matrix, int cols, int rows)
 
 			// Add a new random val to top of column
 			// Second value doesn't really matter as long as it's a valid ascii character.
-			(matrix + i*rows + 0)->val = (column[i].is_blank || column[i].index <= column[i].padding) ? 0 : (rand()%(charset_len-1)) + 1;
+			(matrix + i*rows + 0)->val = (column[i].is_blank || column[i].index <= column[i].padding) ? 0 : (rand()%(charset_len)) + 1;
 			mvprintw(0, i, "%s", charset[(matrix + i*rows + 0)->val]);
 			
 			// Move the column down one position
@@ -253,7 +258,7 @@ void move_cols(struct Column* column, struct Matrix* matrix, int cols, int rows)
 				
 				if(current_blank && !(above_blank)){
 					// Adds a new random character one below the falling string, then prints
-					(matrix + i*rows + r-1)->val = (rand()%(charset_len-1)) + 1;
+					(matrix + i*rows + r-1)->val = (rand()%(charset_len)) + 1;
 					attron(COLOR_PAIR(1));
 					mvprintw(r-1, i, "%s", charset[(matrix + i*rows + r-1)->val]);
 
@@ -269,7 +274,7 @@ void move_cols(struct Column* column, struct Matrix* matrix, int cols, int rows)
 				// for some added randomness.
 				} else if(!(current_blank)){
 					if(rand()%10 == 0){
-						(matrix + i*rows + r-1)->val = (rand()%(charset_len-1)) + 1;
+						(matrix + i*rows + r-1)->val = (rand()%(charset_len)) + 1;
 						attron(COLOR_PAIR(2));
 						mvprintw(r-1, i, "%s", charset[(matrix + i*rows + r-1)->val]);
 					}
@@ -294,21 +299,21 @@ void set_color(char* head, char* tail){
 	// yanderedev has enetered the chat.
 	// Set head color
 	if(strcmp(head, "WHITE") == 0){
-		init_pair(1, 7, -1);
+		init_pair(1, 15, -1);
 	} else if(strcmp(head, "BLACK") == 0){
 		init_pair(1, 0, -1);
 	}else if(strcmp(head, "GREEN") == 0){
-		init_pair(1, 2, -1);
+		init_pair(1, 10, -1);
 	}else if(strcmp(head, "YELLOW") == 0){
-		init_pair(1, 3, -1);
+		init_pair(1, 11, -1);
 	}else if(strcmp(head, "BLUE") == 0){
-		init_pair(1, 4, -1);
+		init_pair(1, 12, -1);
 	}else if(strcmp(head, "MAGENTA") == 0){
-		init_pair(1, 5, -1);
+		init_pair(1, 13, -1);
 	}else if(strcmp(head, "CYAN") == 0){
-		init_pair(1, 6, -1);
+		init_pair(1, 14, -1);
 	}else if(strcmp(head, "RED") == 0){
-		init_pair(1, 1, -1);
+		init_pair(1, 9, -1);
 	}
 
 	// Set tail color
@@ -317,7 +322,7 @@ void set_color(char* head, char* tail){
 	} else if(strcmp(tail, "BLACK") == 0){
 		init_pair(2, 0, -1);
 	}else if(strcmp(tail, "GREEN") == 0){
-		init_pair(2, 2, -1);
+		init_pair(2, 10, -1);
 	}else if(strcmp(tail, "YELLOW") == 0){
 		init_pair(2, 3, -1);
 	}else if(strcmp(tail, "BLUE") == 0){
