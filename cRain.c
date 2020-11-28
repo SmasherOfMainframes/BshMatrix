@@ -99,6 +99,7 @@ struct config {
 	char col_tl[16];
 	char chset_name[64];
 	bool chset_flag;
+	unsigned int delay;
 };
 
 
@@ -143,6 +144,12 @@ static int parse_opt (int key, char* arg, struct argp_state* state) {
 			config->chset_flag = true;
 			break;
 		}
+		case 'd':
+		{
+			config->delay = atoi(arg);
+			break;
+		}
+
 	}
 	return 0;
 }
@@ -160,12 +167,14 @@ int main(int argc, char* argv[]){
 	struct config config;
 	strncpy(config.col_hd, DEFAULT_HEAD_COLOR, 16);
 	strncpy(config.col_tl, DEFAULT_TAIL_COLOR, 16);
+	config.delay = 2500;
 	config.chset_flag = false;
 
 	struct argp_option options[] = {
 		{ 0, 'h', "Head color", 0, "Set head color." },
 		{ 0, 't', "Tail color", 0, "Set tail color." },
 		{ 0, 'c', "Charset", 0, "Set character set." },
+		{ 0, 'd', "Delay", 0, "How fast columns descend. Reccomended 2000 - 4000" },
 		{ 0 }
 	};
 	struct argp argp = { options, parse_opt, 0, 0 };
@@ -214,7 +223,7 @@ int main(int argc, char* argv[]){
 	while( !(is_keypressed()) ){
 		move_cols(columns, thematrix[0], COLS, ROWS);
 		refresh();
-		usleep(2500);
+		usleep(config.delay);
 	}
 
 	// ----- Goodbye ----- //
