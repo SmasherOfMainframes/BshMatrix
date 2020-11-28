@@ -4,7 +4,11 @@
 #include <stdbool.h>	// BOOL
 #include <string.h>		// strcmp
 #include <locale.h>		// for setting locale
+#include <argp.h>		// For command line processing
 #include <ncursesw/ncurses.h>
+
+#define DEFAULT_HEAD_COLOR "WHITE"
+#define DEFAULT_TAIL_COLOR "GREEN"
 
 /* TODO:
  * 0. Shouldn't need to hold values, should be able to read them from screen, should help memory usage
@@ -53,32 +57,6 @@
 -------------------- MR. WORLD WIDE -----------------
 -------------------------------------------------- */
 
-// CHARACTERS
-// This is the characterset to be printed, the first entry MUST be " ".
-// The second dimension size must be able to accomadate biggest unicode 
-// symbol (+1 for /0).
-// const char charset[][4] = {
-// 	" ","0","1","2","3","4","5","6","7","8","9",":",".","=","*",
-// 	"+","-","¦","|","_","ｦ","ｱ","ｳ","ｴ","ｵ","ｶ","ｷ","ｹ","ｺ","ｻ",
-// 	"ｼ","ｽ","ｾ","ｿ","ﾀ","ﾂ","ﾃ","ﾅ","ﾆ","ﾇ","ﾈ","ﾊ","ﾋ","ﾎ","ﾏ",
-// 	"ﾐ","ﾑ","ﾒ","ﾓ","ﾔ","ﾕ","ﾗ","ﾘ","ﾜ"
-// };
-// const char charset[][4] = {
-// 	" ","0","1"
-// };
-// const char charset[][4] = {
-// 	" ","☻","☺"
-// };
-// const char charset[][4] = {
-// " ","⠁","⠂","⠃","⠄","⠅","⠆","⠇","⠈","⠉","⠊","⠋","⠌","⠍","⠎","⠏","⠐","⠑","⠒",
-// "⠓","⠔","⠕","⠖","⠗","⠘","⠙","⠚","⠛","⠜","⠝","⠞","⠟","⠠","⠡","⠢","⠣","⠤","⠥",
-// "⠦","⠧","⠨","⠩","⠪","⠫","⠬","⠭","⠮","⠯","⠰","⠱","⠲","⠳","⠴","⠵","⠶","⠷","⠸",
-// "⠹","⠺","⠻","⠼","⠽","⠾","⠿"
-// };
-// const int charset_len = sizeof(charset)/sizeof(charset[0]);
-char charset[256][4];
-int charset_len = 1;
-
 // Data struct for each column
 struct Column{
 	unsigned int speed;		// How many ticks until the droplet falls
@@ -96,6 +74,34 @@ struct Matrix{
 	int val;
 };
 
+char charset[256][4] = {
+	" ", "a", "b", "c", "d", 
+	"e", "f", "g", "h", "i", 
+	"j", "k", "l", "m", "n", 
+	"o", "p", "q", "r", "s",
+	"t", "u", "v", "w", "x",
+	"y", "z", 
+	"A", "B", "C", "E", 
+	"E", "F", "G", "H", "I", 
+	"J", "K", "L", "M", "N", 
+	"O", "P", "Q", "R", "S",
+	"T", "U", "V", "W", "X",
+	"Y", "Z",
+	"0", "1", "2", "3", "4",
+	"5", "6", "7", "8", "9", 
+	"!", "@", "#", "$", "%", 
+	"^", "&", "*"
+};
+int charset_len = 71;
+
+struct config {
+	char col_hd[16];
+	char col_tl[16];
+	char chset_name[64];
+	bool chset_flag;
+};
+
+
 /* --------------------------------------------------
 ---------------------- PROTOTYPES -------------------
 -------------------------------------------------- */
@@ -106,19 +112,68 @@ void set_all_cols(struct Column* column, int cols, int rows);
 
 void move_cols(struct Column* column, struct Matrix* matrix, int cols, int rows);
 
-void set_color(char* head, char* tail);
+void set_h_color(char* head);
+void set_t_color(char* tail);
+
+void set_charset(char* name);
 
 int is_keypressed();
+
+/* --------------------------------------------------
+------------------------- ARGP ----------------------
+-------------------------------------------------- */
+
+static int parse_opt (int key, char* arg, struct argp_state* state) {
+	struct config* config = state->input;
+	switch (key){
+		case 'h':
+		{
+			strncpy(config->col_hd, arg, 16);
+			break;
+			
+		}
+		case 't':
+		{
+			strncpy(config->col_tl, arg, 16);
+			break;
+		}
+		case 'c':
+		{
+			strncpy(config->chset_name, arg, 64);
+			config->chset_flag = true;
+			break;
+		}
+	}
+	return 0;
+}
 
 /* --------------------------------------------------
 ------------------------- MAIN ----------------------
 -------------------------------------------------- */
 
 int main(int argc, char* argv[]){
-	// Needed for unicode support
+	// Needed for unicode support. MUST BE FIRST.
 	setlocale(LC_ALL, "en_CA.UTF-8");
 
-	// ncurses init stuff
+	// ----- ARGP ----- //
+
+	struct config config;
+	strncpy(config.col_hd, DEFAULT_HEAD_COLOR, 16);
+	strncpy(config.col_tl, DEFAULT_TAIL_COLOR, 16);
+	config.chset_flag = false;
+
+	struct argp_option options[] = {
+		{ 0, 'h', "Head color", 0, "Set head color." },
+		{ 0, 't', "Tail color", 0, "Set tail color." },
+		{ 0, 'c', "Charset", 0, "Set character set." },
+		{ 0 }
+	};
+	struct argp argp = { options, parse_opt, 0, 0 };
+	argp_parse(&argp, argc, argv, 0, 0, &config);
+
+
+	// ----- NCURSE INIT ----- //
+
 	initscr();	
 	start_color();
 	use_default_colors();	// allows transparent background
@@ -127,59 +182,13 @@ int main(int argc, char* argv[]){
 
 	srand(time(0));
 
-	////////////////////////////
-	////////////////////////////
+	// ----- CONFIG SETUP ----- //
 
-	FILE* fp = fopen("charsets", "r");
-	char buff_line[256];
+	set_h_color(config.col_hd);
+	set_t_color(config.col_tl);
+	if(config.chset_flag)
+		set_charset(config.chset_name);
 
-
-	// if(argv[1] != NULL){
-	// 	char MODE[] = argv[1];
-	// } else {
-	// 	char MODE[] = "BRAILLE";
-	// }
-
-	charset[0][0] = ' ';
-	while(fgets(buff_line, 256, fp) != NULL){
-		char buff_name[64];
-		int idx = 0;
-		while(buff_line[idx] != ' '){
-			buff_name[idx] = buff_line[idx];
-			idx++;
-		}
-		buff_name[idx] = '\0';
-
-		idx++;
-
-		if(!strcmp(buff_name, argv[1])){
-			// LOOP THROUGH ALL CHARS
-			char buff_char[4];
-			int i = 0;
-			while(buff_line[idx-1] != '\0'){
-				if(buff_line[idx] == ' ' || buff_line[idx] == '\0'){
-					buff_char[i] = '\0';
-					idx++;
-					strcpy(charset[charset_len], buff_char);
-					charset_len++;
-					i = 0;
-				} else {
-					buff_char[i] = buff_line[idx];
-					idx++;
-					i++;
-				}
-			}
-			charset_len-=2;	// lol why does this stabilize everything??
-			break;
-		}
-	}
-
-
-
-	/////////////////////////////
-	/////////////////////////////
-
-	set_color(argv[2], argv[3]);	// Head color, tail color
 
 	// Using built in ncurses function to get the terminal size, 
 	// which is needed for program logic.
@@ -207,9 +216,8 @@ int main(int argc, char* argv[]){
 		refresh();
 		usleep(2500);
 	}
-	// ------ MAIN LOOP -------- //
 
-	// Goodbye
+	// ----- Goodbye ----- //
 	endwin();
 	return 0;
 }
@@ -295,9 +303,7 @@ void move_cols(struct Column* column, struct Matrix* matrix, int cols, int rows)
 	}
 }
 
-void set_color(char* head, char* tail){
-	// yanderedev has enetered the chat.
-	// Set head color
+void set_h_color(char* head){
 	if(strcmp(head, "WHITE") == 0){
 		init_pair(1, 15, -1);
 	} else if(strcmp(head, "BLACK") == 0){
@@ -315,8 +321,8 @@ void set_color(char* head, char* tail){
 	}else if(strcmp(head, "RED") == 0){
 		init_pair(1, 9, -1);
 	}
-
-	// Set tail color
+}
+void set_t_color(char* tail){
 	if(strcmp(tail, "WHITE") == 0){
 		init_pair(2, 7, -1);
 	} else if(strcmp(tail, "BLACK") == 0){
@@ -334,7 +340,47 @@ void set_color(char* head, char* tail){
 	}else if(strcmp(tail, "RED") == 0){
 		init_pair(2, 1, -1);
 	}
-	// yanderedev has left the chat.
+}
+
+void set_charset(char* name){
+	FILE* fp = fopen("charsets", "r");
+	char buff_line[256];
+
+	charset_len = 1;
+
+	charset[0][0] = ' ';
+	while(fgets(buff_line, 256, fp) != NULL){
+		char buff_name[64];
+		int idx = 0;
+		while(buff_line[idx] != ' '){
+			buff_name[idx] = buff_line[idx];
+			idx++;
+		}
+		buff_name[idx] = '\0';
+
+		idx++;
+
+		if(!strcmp(buff_name, name)){
+			// LOOP THROUGH ALL CHARS
+			char buff_char[4];
+			int i = 0;
+			while(buff_line[idx-1] != '\0'){
+				if(buff_line[idx] == ' ' || buff_line[idx] == '\0'){
+					buff_char[i] = '\0';
+					idx++;
+					strcpy(charset[charset_len], buff_char);
+					charset_len++;
+					i = 0;
+				} else {
+					buff_char[i] = buff_line[idx];
+					idx++;
+					i++;
+				}
+			}
+			charset_len-=2;	// lol why does this stabilize everything??
+			break;
+		}
+	}
 }
 
 int is_keypressed()
