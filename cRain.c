@@ -11,14 +11,9 @@
 #define DEFAULT_TAIL_COLOR "GREEN"
 
 /* TODO:
- * 0. Shouldn't need to hold values, should be able to read them from screen, should help memory usage
- * 1. Add sys args for...
- 		Mode (rain mode -mr, matrix mode (normal) -mmn, matrix mode (japanese char) -mmj
-		Head/tail color			-h COL -t COL
- 		Fullness				-f (0% - 100%)
- 		Speed					-s (0 - 1000000)
- 		Random value changing	-r (0% - 100%)
- * 2. Apply Clean Code (TM) to the move_col functions
+ * 0. Why the fuck are we looping through each cell and performing all those checks?????
+ *      We should be keeping track of where the column is, then modifying that column...
+ * 1. Check for ~/.config/cRain folder, where charsets and config will live.
  *
  * HOW DOES THIS TRASH WORK???
  *
@@ -162,6 +157,8 @@ int main(int argc, char* argv[]){
 	// Needed for unicode support. MUST BE FIRST.
 	setlocale(LC_ALL, "en_CA.UTF-8");
 
+	// ----- TESTY ----- //
+
 	// ----- ARGP ----- //
 
 	struct config config;
@@ -180,7 +177,6 @@ int main(int argc, char* argv[]){
 	struct argp argp = { options, parse_opt, 0, 0 };
 	argp_parse(&argp, argc, argv, 0, 0, &config);
 
-
 	// ----- NCURSE INIT ----- //
 
 	initscr();	
@@ -195,11 +191,11 @@ int main(int argc, char* argv[]){
 
 	set_h_color(config.col_hd);
 	set_t_color(config.col_tl);
-	if(config.chset_flag)
+	if(config.chset_flag) {
 		set_charset(config.chset_name);
+	}
 
-
-	// Using built in ncurses function to get the terminal size, 
+	// Using built in ncurses function to get the terminal size,
 	// which is needed for program logic.
 	int COLS;
 	int ROWS;
@@ -209,7 +205,7 @@ int main(int argc, char* argv[]){
 	struct Column columns[COLS];
 	// Initialize the starting values of each column.
 	set_all_cols(columns, COLS, ROWS);
-	
+
 	// THE MATRIX
 	struct Matrix thematrix[COLS][ROWS];
 	// Set the matrix to all " "
@@ -352,42 +348,67 @@ void set_t_color(char* tail){
 }
 
 void set_charset(char* name){
-	FILE* fp = fopen("charsets", "r");
-	char buff_line[256];
+	// Build the path string so we can check if the user has created the ~/.config/cRain/charsets file
+	char home[] = "/home/";
+	char path1[] = "/.config/cRain/charsets";
+	char user[32];
+	strncpy(user, getlogin(), 16);
 
-	charset_len = 1;
+	char path[64];
+	strncat(path, home, 7);
+	strncat(path, user, 32);
+	strncat(path, path1, 24);
 
-	charset[0][0] = ' ';
-	while(fgets(buff_line, 256, fp) != NULL){
-		char buff_name[64];
-		int idx = 0;
-		while(buff_line[idx] != ' '){
-			buff_name[idx] = buff_line[idx];
-			idx++;
-		}
-		buff_name[idx] = '\0';
+	int match_flag = 0;
 
-		idx++;
+	// If there is a charset file, then open er up and checky checky
+	if(!access(path, R_OK)) {
+		FILE *fp = fopen(path, "r");
+		char buff_line[256];
 
-		if(!strcmp(buff_name, name)){
-			// LOOP THROUGH ALL CHARS
-			char buff_char[4];
-			int i = 0;
-			while(buff_line[idx-1] != '\0'){
-				if(buff_line[idx] == ' ' || buff_line[idx] == '\0'){
-					buff_char[i] = '\0';
-					idx++;
-					strcpy(charset[charset_len], buff_char);
-					charset_len++;
-					i = 0;
-				} else {
-					buff_char[i] = buff_line[idx];
-					idx++;
-					i++;
-				}
+		while (fgets(buff_line, 256, fp) != NULL) {
+			// First we parse through the names of the charsets given in the charsets file
+			// and check for a match against param name
+			char buff_name[64];
+			int idx = 0;
+			while (buff_line[idx] != ' ') {
+				buff_name[idx] = buff_line[idx];
+				idx++;
 			}
-			charset_len-=2;	// lol why does this stabilize everything??
-			break;
+			buff_name[idx] = '\0';
+
+			idx++;
+
+			// If we have a matchy match, update the charset array.
+			if (!strcmp(buff_name, name)) {
+				match_flag = 1;
+				// Reset the default character set
+				charset_len = 1;
+				charset[0][0] = ' ';
+				// LOOP THROUGH ALL CHARS
+				char buff_char[4];
+				int i = 0;
+				while (buff_line[idx - 1] != '\0') {
+					if (buff_line[idx] == ' ' || buff_line[idx] == '\0') {
+						buff_char[i] = '\0';
+						idx++;
+						strcpy(charset[charset_len], buff_char);
+						charset_len++;
+						i = 0;
+					} else {
+						buff_char[i] = buff_line[idx];
+						idx++;
+						i++;
+					}
+				}
+				charset_len -= 2;    // lol why does this stabilize everything??
+				break;
+			}
+		}
+		if(!match_flag) {
+			printf("Not a valid charset, fucko.\n");
+			printf("Continuing with default lame charset in 3 seconds.\n");
+			usleep(3000000);
 		}
 	}
 }
