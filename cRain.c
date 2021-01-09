@@ -7,8 +7,8 @@
 #include <argp.h>		// For command line processing
 #include <ncursesw/ncurses.h>
 
-#define DEFAULT_HEAD_COLOR "WHITE"
-#define DEFAULT_TAIL_COLOR "GREEN"
+#define DEFAULT_HEAD_COLOR "white"
+#define DEFAULT_TAIL_COLOR "green"
 
 /* --------------------------------------------------
 -------------------- MR. WORLD WIDE -----------------
@@ -63,7 +63,8 @@ struct config {
 	char col_tl[16];
 	char chset_name[64];
 	bool chset_flag;
-	unsigned int delay;
+	bool async;
+	unsigned int speed;
 };
 
 char charset[256][4] = {
@@ -97,9 +98,12 @@ void init_columns(struct Column* column);
 void init_droplet(struct Droplet* droplet, struct Droplet* next, struct Column* column);
 
 void make_it_rain(struct Column* column);
+void make_it_rain_async(struct Column* column);
+void rain(struct Column* column, int c);
 
-void set_h_color(char* head);
-void set_t_color(char* tail);
+void set_color(char* color, short pair);
+
+void set_speed(struct config* config);
 
 void set_charset(char* name);
 
@@ -129,9 +133,14 @@ static int parse_opt (int key, char* arg, struct argp_state* state) {
 			config->chset_flag = true;
 			break;
 		}
-		case 'd':
+		case 'a':
 		{
-			config->delay = atoi(arg);
+			config->async = true;
+			break;
+		}
+		case 's':
+		{
+			config->speed = atoi(arg);
 			break;
 		}
 		default :
@@ -154,14 +163,16 @@ int main(int argc, char* argv[]){
 	struct config config;
 	strncpy(config.col_hd, DEFAULT_HEAD_COLOR, 16);
 	strncpy(config.col_tl, DEFAULT_TAIL_COLOR, 16);
-	config.delay = 2500;
+	config.speed = 5;
+	config.async = false;
 	config.chset_flag = false;
 
 	struct argp_option options[] = {
-		{ 0, 'h', "Head color", 0, "Set head color." },
-		{ 0, 't', "Tail color", 0, "Set tail color." },
-		{ 0, 'c', "Charset", 0, "Set character set." },
-		{ 0, 'd', "Delay", 0, "How fast columns descend. Reccomended 2000 - 4000" },
+		{ 0, 'h', "Head color",	0, "Set color color." },
+		{ 0, 't', "Tail color",	0, "Set tail color." },
+		{ 0, 'c', "Charset",	0, "Set character set." },
+		{ 0, 'a', 0,			0, "Sets droplets to fall synchronously or asynchronously." },
+		{ 0, 's', "Speed",		0, "How fast columns descend, from 0 - 10." },
 		{ 0 }
 	};
 	struct argp argp = { options, parse_opt, 0, 0 };
@@ -179,8 +190,9 @@ int main(int argc, char* argv[]){
 
 	// ----- CONFIG SETUP ----- //
 
-	set_h_color(config.col_hd);
-	set_t_color(config.col_tl);
+	set_color(config.col_hd, 1);
+	set_color(config.col_tl, 2);
+	set_speed(&config);
 	if(config.chset_flag) {
 		set_charset(config.chset_name);
 	}
@@ -196,10 +208,18 @@ int main(int argc, char* argv[]){
 //	dbg = fopen("/home/smigii/Code/projects/cRain/debug.txt", "w");
 
 	// ------ MAIN LOOP -------- //
-	while( !(is_keypressed()) ){
-		make_it_rain(columns);
-		refresh();
-		usleep(config.delay);
+	if(config.async){
+		while( !(is_keypressed()) ){
+			make_it_rain_async(columns);
+			refresh();
+			usleep(config.speed);
+		}
+	} else {
+		while( !(is_keypressed()) ){
+			make_it_rain(columns);
+			refresh();
+			usleep(config.speed);
+		}
 	}
 
 	// ----- Goodbye ----- //
@@ -213,7 +233,7 @@ int main(int argc, char* argv[]){
 -------------------------------------------------- */
 
 void set_column(struct Column* column){
-	column->speed		= rand()%5 + 10;
+	column->speed		= rand()%4 + 3;
 	column->tick		= 0;
 	column->index		= 0;
 	column->length 		= rand()%(int)(0.8*ROWS) + 3;
@@ -240,105 +260,106 @@ void init_droplet(struct Droplet* droplet, struct Droplet* next, struct Column* 
 	droplet->next = next;
 }
 
-void make_it_rain(struct Column* column){
+void make_it_rain_async(struct Column* column){
 	for(size_t c = 0; c < COLS; c++){
-//		column[c].tick++;
-
-//		if(column[c].tick == column[c].speed) {
+		column[c].tick++;
+		if(column[c].tick == column[c].speed) {
 			column[c].index++;
-//			column[c].tick = 0;
-
-			struct Droplet* droplet = column[c].bottom;
-			while(droplet != NULL){
-
-				// Move the head down one position, unless it would fall off the screen.
-				if(droplet->head+1 < ROWS){
-					droplet->head++;
-					int head = droplet->head;
-
-					// Unfortunately, there does not seem to be a way to just change the color of
-					// a specific cell with ncurses, so we have to reprint the whole character and
-					// adjust the color then. :(
-					if(head > 0) {
-						attron(COLOR_PAIR(2));
-						mvprintw(head - 1, c, "%s", droplet->prev_char);
-					}
-					if(!droplet->is_blank) {
-						char str[4] = " ";
-						strncpy(str, charset[(rand() % (charset_len)) + 1], 4);
-						strncpy(droplet->prev_char, str, 4);
-
-						// Sets color to Head Color, unless droplet reaches the bottom
-						(droplet->head + 1 >= ROWS) ? attron(COLOR_PAIR(2)) : attron(COLOR_PAIR(1));
-						mvprintw(head, c, "%s", str);
-					}
-				}
-
-				// Move the tail down one position and clear the character at that position,
-				// unless it would fall off the screen. If it does, then it's time to delete the Droplet.
-				if(droplet->head >= droplet->length && droplet->tail+1 < ROWS){
-					droplet->tail++;
-					mvprintw(droplet->tail, c, " ");
-					// End
-					droplet = droplet->next;
-				} else if(droplet->head < droplet->length && droplet->tail+1 < ROWS){
-					droplet = droplet->next;
-				} else {
-					// Reassign current droplet -> free old bottom -> set bottom to reassigned current droplet.
-					droplet = droplet->next;
-					free(column[c].bottom);
-					column[c].bottom = droplet;
-				}
-
-			}
-
-			// Reshuffle Column attributes
-			if(column[c].index == column[c].length + column[c].padding){
-				set_column(&column[c]);
-				column[c].top->next = (struct Droplet*)malloc(sizeof(struct Droplet));
-				column[c].top = column[c].top->next;
-				init_droplet(column[c].top, NULL, &column[c]);
-			}
+			column[c].tick = 0;
+			rain(column, c);
 		}
-//	}
-}
-
-void set_h_color(char* head){
-	if(strcmp(head, "WHITE") == 0){
-		init_pair(1, 15, -1);
-	} else if(strcmp(head, "BLACK") == 0){
-		init_pair(1, 0, -1);
-	}else if(strcmp(head, "GREEN") == 0){
-		init_pair(1, 10, -1);
-	}else if(strcmp(head, "YELLOW") == 0){
-		init_pair(1, 11, -1);
-	}else if(strcmp(head, "BLUE") == 0){
-		init_pair(1, 12, -1);
-	}else if(strcmp(head, "MAGENTA") == 0){
-		init_pair(1, 13, -1);
-	}else if(strcmp(head, "CYAN") == 0){
-		init_pair(1, 14, -1);
-	}else if(strcmp(head, "RED") == 0){
-		init_pair(1, 9, -1);
 	}
 }
-void set_t_color(char* tail){
-	if(strcmp(tail, "WHITE") == 0){
-		init_pair(2, 7, -1);
-	} else if(strcmp(tail, "BLACK") == 0){
-		init_pair(2, 0, -1);
-	}else if(strcmp(tail, "GREEN") == 0){
-		init_pair(2, 10, -1);
-	}else if(strcmp(tail, "YELLOW") == 0){
-		init_pair(2, 3, -1);
-	}else if(strcmp(tail, "BLUE") == 0){
-		init_pair(2, 4, -1);
-	}else if(strcmp(tail, "MAGENTA") == 0){
-		init_pair(2, 5, -1);
-	}else if(strcmp(tail, "CYAN") == 0){
-		init_pair(2, 6, -1);
-	}else if(strcmp(tail, "RED") == 0){
-		init_pair(2, 1, -1);
+void make_it_rain(struct Column* column){
+	for(size_t c = 0; c < COLS; c++){
+		column[c].index++;
+		rain(column, c);
+	}
+}
+
+void rain(struct Column* column, int c){
+	struct Droplet* droplet = column[c].bottom;
+	while(droplet != NULL){
+		// Move the color down one position, unless it would fall off the screen.
+		if(droplet->head+1 < ROWS){
+			droplet->head++;
+			int head = droplet->head;
+
+			// Unfortunately, there does not seem to be a way to just change the color of
+			// a specific cell with ncurses, so we have to reprint the whole character and
+			// adjust the color then. :(
+			if(head > 0) {
+				attron(COLOR_PAIR(2));
+				mvprintw(head - 1, c, "%s", droplet->prev_char);
+			}
+			if(!droplet->is_blank) {
+				char str[4] = " ";
+				strncpy(str, charset[(rand() % (charset_len)) + 1], 4);
+				strncpy(droplet->prev_char, str, 4);
+
+				// Sets color to Head Color, unless droplet reaches the bottom
+				(droplet->head + 1 >= ROWS) ? attron(COLOR_PAIR(2)) : attron(COLOR_PAIR(1));
+				mvprintw(head, c, "%s", str);
+			}
+		}
+		// Move the tail down one position and clear the character at that position,
+		// unless it would fall off the screen. If it does, then it's time to delete the Droplet.
+		if(droplet->head >= droplet->length && droplet->tail+1 < ROWS){
+			droplet->tail++;
+			mvprintw(droplet->tail, c, " ");
+			// End
+			droplet = droplet->next;
+		} else if(droplet->head < droplet->length && droplet->tail+1 < ROWS){
+			droplet = droplet->next;
+		} else {
+			// Reassign current droplet -> free old bottom -> set bottom to reassigned current droplet.
+			droplet = droplet->next;
+			free(column[c].bottom);
+			column[c].bottom = droplet;
+		}
+
+	}
+	// Reshuffle Column attributes
+	if(column[c].index == column[c].length + column[c].padding){
+		set_column(&column[c]);
+		column[c].top->next = (struct Droplet*)malloc(sizeof(struct Droplet));
+		column[c].top = column[c].top->next;
+		init_droplet(column[c].top, NULL, &column[c]);
+	}
+}
+
+void set_speed(struct config* config){
+	int n = 10 - config->speed;
+	// Magic numbers, they give a nice range on my machine so that's
+	// what you're getting.
+	if(config->async){
+		config->speed = 3000 + (n * 800);
+	} else {
+		config->speed = 13000 + (n * 3400);
+	}
+}
+
+void set_color(char* color, short pair){
+	for(int i = 0; color[i]; i++){
+		color[i] = tolower(color[i]);
+	}
+
+	if(strcmp(color, "white") == 0){
+		init_pair(pair, 15, -1);
+	} else if(strcmp(color, "black") == 0){
+		init_pair(pair, 0, -1);
+	}else if(strcmp(color, "green") == 0){
+		init_pair(pair, 10, -1);
+	}else if(strcmp(color, "yellow") == 0){
+		init_pair(pair, 11, -1);
+	}else if(strcmp(color, "blue") == 0){
+		init_pair(pair, 12, -1);
+	}else if(strcmp(color, "magenta") == 0){
+		init_pair(pair, 13, -1);
+	}else if(strcmp(color, "cyan") == 0){
+		init_pair(pair, 14, -1);
+	}else if(strcmp(color, "red") == 0){
+		init_pair(pair, 9, -1);
 	}
 }
 
