@@ -14,22 +14,6 @@
 -------------------- MR. WORLD WIDE -----------------
 -------------------------------------------------- */
 
-/*
- *
- * The asynchronous droplets have a pretty big performance cost.
- * With asynchronous droplets, we hover around...
- * 			USR 9% - SYS 9%
- * 			One core gets sent to 100% usage
- * With synchronized droplets...
- * 			USR 2.5% - SYS 7%
- * 			All cores usage increase a few percent.
- * Which is pretty much the same as cmatrix.
- *
- * TODO:
- * Add another command line option for synchronous/asynchronous droplets.
- *
- */
-
 //FILE* dbg;
 
 // Num rows and columns, set in main().
@@ -68,21 +52,21 @@ struct config {
 };
 
 char charset[256][4] = {
-	" ", "a", "b", "c", "d", 
-	"e", "f", "g", "h", "i", 
-	"j", "k", "l", "m", "n", 
+	" ", "a", "b", "c", "d",
+	"e", "f", "g", "h", "i",
+	"j", "k", "l", "m", "n",
 	"o", "p", "q", "r", "s",
 	"t", "u", "v", "w", "x",
-	"y", "z", 
+	"y", "z",
 	"A", "B", "C", "D",
-	"E", "F", "G", "H", "I", 
-	"J", "K", "L", "M", "N", 
+	"E", "F", "G", "H", "I",
+	"J", "K", "L", "M", "N",
 	"O", "P", "Q", "R", "S",
 	"T", "U", "V", "W", "X",
 	"Y", "Z",
 	"0", "1", "2", "3", "4",
-	"5", "6", "7", "8", "9", 
-	"!", "@", "#", "$", "%", 
+	"5", "6", "7", "8", "9",
+	"!", "@", "#", "$", "%",
 	"^", "&", "*"
 };
 int charset_len = 71;
@@ -97,9 +81,9 @@ void init_columns(struct Column* column);
 
 void init_droplet(struct Droplet* droplet, struct Droplet* next, struct Column* column);
 
+void mir_loop(struct Column* column, size_t c);
 void make_it_rain(struct Column* column);
 void make_it_rain_async(struct Column* column);
-void rain(struct Column* column, int c);
 
 void set_color(char* color, short pair);
 
@@ -120,7 +104,7 @@ static int parse_opt (int key, char* arg, struct argp_state* state) {
 		{
 			strncpy(config->col_hd, arg, 16);
 			break;
-			
+
 		}
 		case 't':
 		{
@@ -180,7 +164,7 @@ int main(int argc, char* argv[]){
 
 	// ----- NCURSE INIT ----- //
 
-	initscr();	
+	initscr();
 	start_color();
 	use_default_colors();	// allows transparent background
 	curs_set(0);			// turns off cursor
@@ -222,6 +206,7 @@ int main(int argc, char* argv[]){
 		}
 	}
 
+
 	// ----- Goodbye ----- //
 	endwin();
 //	fclose(dbg);
@@ -260,27 +245,11 @@ void init_droplet(struct Droplet* droplet, struct Droplet* next, struct Column* 
 	droplet->next = next;
 }
 
-void make_it_rain_async(struct Column* column){
-	for(size_t c = 0; c < COLS; c++){
-		column[c].tick++;
-		if(column[c].tick == column[c].speed) {
-			column[c].index++;
-			column[c].tick = 0;
-			rain(column, c);
-		}
-	}
-}
-void make_it_rain(struct Column* column){
-	for(size_t c = 0; c < COLS; c++){
-		column[c].index++;
-		rain(column, c);
-	}
-}
-
-void rain(struct Column* column, int c){
+void mir_loop(struct Column* column, size_t c){
 	struct Droplet* droplet = column[c].bottom;
 	while(droplet != NULL){
-		// Move the color down one position, unless it would fall off the screen.
+
+		// Move the head down one position, unless it would fall off the screen.
 		if(droplet->head+1 < ROWS){
 			droplet->head++;
 			int head = droplet->head;
@@ -292,16 +261,16 @@ void rain(struct Column* column, int c){
 				attron(COLOR_PAIR(2));
 				mvprintw(head - 1, c, "%s", droplet->prev_char);
 			}
-			if(!droplet->is_blank) {
-				char str[4] = " ";
-				strncpy(str, charset[(rand() % (charset_len)) + 1], 4);
-				strncpy(droplet->prev_char, str, 4);
+			char str[4] = " ";
+			if(!droplet->is_blank)
+				strncpy(str, charset[(rand()%(charset_len)) + 1], 4);
+			strncpy(droplet->prev_char, str, 4);
 
-				// Sets color to Head Color, unless droplet reaches the bottom
-				(droplet->head + 1 >= ROWS) ? attron(COLOR_PAIR(2)) : attron(COLOR_PAIR(1));
-				mvprintw(head, c, "%s", str);
-			}
+			// Sets color to Head Color, unless droplet reaches the bottom
+			(droplet->head + 1 >= ROWS) ? attron(COLOR_PAIR(2)) : attron(COLOR_PAIR(1));
+			mvprintw(head, c, "%s", str);
 		}
+
 		// Move the tail down one position and clear the character at that position,
 		// unless it would fall off the screen. If it does, then it's time to delete the Droplet.
 		if(droplet->head >= droplet->length && droplet->tail+1 < ROWS){
@@ -319,6 +288,7 @@ void rain(struct Column* column, int c){
 		}
 
 	}
+
 	// Reshuffle Column attributes
 	if(column[c].index == column[c].length + column[c].padding){
 		set_column(&column[c]);
@@ -326,6 +296,26 @@ void rain(struct Column* column, int c){
 		column[c].top = column[c].top->next;
 		init_droplet(column[c].top, NULL, &column[c]);
 	}
+}
+void make_it_rain_async(struct Column* column){
+	for(size_t c = 0; c < COLS; c++){
+		column[c].tick++;
+
+		if(column[c].tick == column[c].speed) {
+			column[c].index++;
+			column[c].tick = 0;
+
+			mir_loop(column, c);
+		}
+	}
+}
+void make_it_rain(struct Column* column){
+	for(size_t c = 0; c < COLS; c++){
+		column[c].index++;
+
+		mir_loop(column, c);
+	}
+
 }
 
 void set_speed(struct config* config){
@@ -431,12 +421,12 @@ void set_charset(char* name){
 
 int is_keypressed()
 {
-    int ch = getch();
+	int ch = getch();
 
-    if (ch != ERR) {
-        ungetch(ch);
-        return 1;
-    } else {
-        return 0;
-    }
+	if (ch != ERR) {
+		ungetch(ch);
+		return 1;
+	} else {
+		return 0;
+	}
 }
