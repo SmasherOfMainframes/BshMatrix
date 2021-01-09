@@ -10,47 +10,15 @@
 #define DEFAULT_HEAD_COLOR "WHITE"
 #define DEFAULT_TAIL_COLOR "GREEN"
 
-/* TODO:
- * 0. Why the fuck are we looping through each cell and performing all those checks?????
- *      We should be keeping track of where the column is, then modifying that column...
- * 1. Check for ~/.config/cRain folder, where charsets and config will live.
- *
- * HOW DOES THIS TRASH WORK???
- *
- * The Matrix is mainly built up of structs called Column. Each Column struct holds
- * data on the column of the matrix. 
- * 
- * Every loop of the while loop in int main, each columns TICK attribute 
- * increases by one. Once TICK reaches the value of SPEED, the INDEX attribute
- * increases by one. So, SPEED determines how many ticks it takes to increase
- * INDEX. 
- *
- * Every time INDEX is incremented, the top row of The Matrix is fed a new character.
- * What character appears depends on whether the IS_BLANK attribute is true or false.
- * If true, then every time INDEX is increased, a " " or int value 32 is added to the
- * Matrix. If false, then a random value (1 <= n < charset size) is added to the head of the 
- * falling string, or, if INDEX is currently less than the value of PADDING, a " " is added.
- * 
- * Padding refers to how many leading zeroes will be added before the regular 
- * characters are added. This prevents long, continuous strings from displaying.
- *
- * Also, whenever INDEX is incremented, a new value is added to the bottom of the droplet,
- * and the top value is replaced with " ". This keeps values in place while the droplet falls.
- *
- * This continues until INDEX reaches the value LENGTH. When this happens, the Column
- * struct is reshuffled with new, randomized values and the current droplet will continue
- * to fall down while a new one starts at the top of the column.
- *
- * Finally, a random number of non-" " characters are selected to be changed to a new
- * value, to give the falling strings some fun randomness.
- * 
- * UPDATED : Sept 20 2020, 5am
- *
- */
-
 /* --------------------------------------------------
 -------------------- MR. WORLD WIDE -----------------
 -------------------------------------------------- */
+
+//FILE* dbg;
+
+// Num rows and columns, set in main().
+int COLS;
+int ROWS;
 
 // Data struct for each column
 struct Column{
@@ -60,13 +28,26 @@ struct Column{
 	int padding;			// How many leading " " are in the string
 	int length;				// Determines the length of the "droplet" string
 	bool is_blank;			// Is the "droplet" string blank or regular?
+
+	struct Droplet* bottom;
+	struct Droplet* top;
 };
 
-// Data struct of The Matrix, which holds value
-// This should be replaced by a simple matrix, it used
-// to hold color data aswell. But alas, i don't wanna.
-struct Matrix{
-	int val;
+struct Droplet {
+	int tail;
+	int head;
+	int length;
+	char prev_char[4];
+	bool is_blank;
+	struct Droplet* next;
+};
+
+struct config {
+	char col_hd[16];
+	char col_tl[16];
+	char chset_name[64];
+	bool chset_flag;
+	unsigned int delay;
 };
 
 char charset[256][4] = {
@@ -76,7 +57,7 @@ char charset[256][4] = {
 	"o", "p", "q", "r", "s",
 	"t", "u", "v", "w", "x",
 	"y", "z", 
-	"A", "B", "C", "E", 
+	"A", "B", "C", "D",
 	"E", "F", "G", "H", "I", 
 	"J", "K", "L", "M", "N", 
 	"O", "P", "Q", "R", "S",
@@ -89,24 +70,17 @@ char charset[256][4] = {
 };
 int charset_len = 71;
 
-struct config {
-	char col_hd[16];
-	char col_tl[16];
-	char chset_name[64];
-	bool chset_flag;
-	unsigned int delay;
-};
-
-
 /* --------------------------------------------------
 ---------------------- PROTOTYPES -------------------
 -------------------------------------------------- */
 
-void set_col(struct Column* col, int rows);
+void set_column(struct Column* col);
 
-void set_all_cols(struct Column* column, int cols, int rows);
+void init_columns(struct Column* column);
 
-void move_cols(struct Column* column, struct Matrix* matrix, int cols, int rows);
+void init_droplet(struct Droplet* droplet, struct Droplet* next, struct Column* column);
+
+void make_it_rain(struct Column* column);
 
 void set_h_color(char* head);
 void set_t_color(char* tail);
@@ -144,6 +118,8 @@ static int parse_opt (int key, char* arg, struct argp_state* state) {
 			config->delay = atoi(arg);
 			break;
 		}
+		default :
+			break;
 
 	}
 	return 0;
@@ -156,8 +132,6 @@ static int parse_opt (int key, char* arg, struct argp_state* state) {
 int main(int argc, char* argv[]){
 	// Needed for unicode support. MUST BE FIRST.
 	setlocale(LC_ALL, "en_CA.UTF-8");
-
-	// ----- TESTY ----- //
 
 	// ----- ARGP ----- //
 
@@ -195,35 +169,26 @@ int main(int argc, char* argv[]){
 		set_charset(config.chset_name);
 	}
 
-	// Using built in ncurses function to get the terminal size,
-	// which is needed for program logic.
-	int COLS;
-	int ROWS;
+	// Sets ROWS and COLS to size of terminal.
 	getmaxyx(stdscr, ROWS, COLS);
 
 	// Array of Column structs, used to hold column-specific data
 	struct Column columns[COLS];
 	// Initialize the starting values of each column.
-	set_all_cols(columns, COLS, ROWS);
+	init_columns(columns);
 
-	// THE MATRIX
-	struct Matrix thematrix[COLS][ROWS];
-	// Set the matrix to all " "
-	for(size_t i = 0; i < ROWS; i++){
-		for(size_t j = 0; j < COLS; j++){
-			thematrix[j][i].val = 0;
-		}
-	}
+//	dbg = fopen("/home/smigii/Code/projects/cRain/debug.txt", "w");
 
 	// ------ MAIN LOOP -------- //
 	while( !(is_keypressed()) ){
-		move_cols(columns, thematrix[0], COLS, ROWS);
+		make_it_rain(columns);
 		refresh();
 		usleep(config.delay);
 	}
 
 	// ----- Goodbye ----- //
 	endwin();
+//	fclose(dbg);
 	return 0;
 }
 
@@ -231,80 +196,93 @@ int main(int argc, char* argv[]){
 ---------------------- FONCTIONS --------------------
 -------------------------------------------------- */
 
-void set_col(struct Column* column, int rows){
+void set_column(struct Column* column){
 	column->speed		= rand()%5 + 10;
 	column->tick		= 0;
 	column->index		= 0;
-	column->length 		= rand()%(int)(0.8*rows) + 3;
-	column->padding		= rand()%(int)(0.5*rows) + 3;
+	column->length 		= rand()%(int)(0.8*ROWS) + 3;
+	column->padding		= rand()%(int)(0.5*ROWS) + 3;
 	column->is_blank 	= (rand()%10 < 6) ? true : false;
 }
 
-void set_all_cols(struct Column* column, int cols, int rows){
-	for(size_t i = 0; i < cols; i++){
-		set_col(&column[i], rows);
+void init_columns(struct Column* column){
+	for(size_t i = 0; i < COLS; i++){
+		set_column(&column[i]);
+
+		column[i].bottom = (struct Droplet*)malloc(sizeof(struct Droplet));
+		column[i].top = column[i].bottom;
+
+		init_droplet(column[i].bottom, NULL, &column[i]);
 	}
 }
 
-void move_cols(struct Column* column, struct Matrix* matrix, int cols, int rows){
-	// why the fuck didnt you set var to c????????
-	// This function should be cleaned up and broken into smaller bits.
-	// Unlce Bob would bitch slap you for this.
-	for(size_t i = 0; i < cols; i++){
-		
-		column[i].tick++;
+void init_droplet(struct Droplet* droplet, struct Droplet* next, struct Column* column){
+	droplet->length = column->length;
+	droplet->is_blank = column->is_blank;
+	droplet->head = -1;
+	droplet->tail = -1;
+	droplet->next = next;
+}
 
-		if(column[i].tick == column[i].speed){
-			column[i].index++;
-			column[i].tick = 0;
+void make_it_rain(struct Column* column){
+	for(size_t c = 0; c < COLS; c++){
+		column[c].tick++;
 
-			// Add a new random val to top of column
-			// Second value doesn't really matter as long as it's a valid ascii character.
-			(matrix + i*rows + 0)->val = (column[i].is_blank || column[i].index <= column[i].padding) ? 0 : (rand()%(charset_len)) + 1;
-			mvprintw(0, i, "%s", charset[(matrix + i*rows + 0)->val]);
-			
-			// Move the column down one position
-			for(size_t r = rows; r > 1; r--){
-				
-				bool current_blank = ((matrix + i*rows + r-1)->val == 0) ? true : false;
-				bool above_blank = ((matrix + i*rows + r-2)->val == 0) ? true : false;
-				
-				if(current_blank && !(above_blank)){
-					// Adds a new random character one below the falling string, then prints
-					(matrix + i*rows + r-1)->val = (rand()%(charset_len)) + 1;
-					attron(COLOR_PAIR(1));
-					mvprintw(r-1, i, "%s", charset[(matrix + i*rows + r-1)->val]);
+		if(column[c].tick == column[c].speed) {
+			column[c].index++;
+			column[c].tick = 0;
 
-					attron(COLOR_PAIR(2));
-					mvprintw(r-2, i, "%s", charset[(matrix + i*rows + r-2)->val]);
-				
-				// Sets last character of string to " "
-				} else if(!(current_blank) && above_blank){
-					(matrix + i*rows + r-1)->val = 0;
-					mvprintw(r-1, i, "%s", charset[(matrix + i*rows + r-1)->val]);
-				
-				// Changes some of the non-blank values to a new value
-				// for some added randomness.
-				} else if(!(current_blank)){
-					if(rand()%10 == 0){
-						(matrix + i*rows + r-1)->val = (rand()%(charset_len)) + 1;
+			struct Droplet* droplet = column[c].bottom;
+			while(droplet != NULL){
+
+				// Move the head down one position, unless it would fall off the screen.
+				if(droplet->head+1 < ROWS){
+					droplet->head++;
+					int head = droplet->head;
+
+					// Unfortunately, there does not seem to be a way to just change the color of
+					// a specific cell with ncurses, so we have to reprint the whole character and
+					// adjust the color then. :(
+					if(head > 0) {
 						attron(COLOR_PAIR(2));
-						mvprintw(r-1, i, "%s", charset[(matrix + i*rows + r-1)->val]);
+						mvprintw(head - 1, c, "%s", droplet->prev_char);
 					}
+					char str[4] = " ";
+					if(!droplet->is_blank)
+						strncpy(str, charset[(rand()%(charset_len)) + 1], 4);
+					strncpy(droplet->prev_char, str, 4);
+
+					// Sets color to Head Color, unless droplet reaches the bottom
+					(droplet->head + 1 >= ROWS) ? attron(COLOR_PAIR(2)) : attron(COLOR_PAIR(1));
+					mvprintw(head, c, "%s", str);
 				}
-				
-				// Prevents head from staying head color when it reaches the bottom
-				if(r == rows){
-					attron(COLOR_PAIR(2));
-					mvprintw(r-1, i, "%s", charset[(matrix + i*rows + r-1)->val]);
+
+				// Move the tail down one position and clear the character at that position,
+				// unless it would fall off the screen. If it does, then it's time to delete the Droplet.
+				if(droplet->head >= droplet->length && droplet->tail+1 < ROWS){
+					droplet->tail++;
+					mvprintw(droplet->tail, c, " ");
+					// End
+					droplet = droplet->next;
+				} else if(droplet->head < droplet->length && droplet->tail+1 < ROWS){
+					droplet = droplet->next;
+				} else {
+					// Reassign current droplet -> free old bottom -> set bottom to reassigned current droplet.
+					droplet = droplet->next;
+					free(column[c].bottom);
+					column[c].bottom = droplet;
 				}
+
 			}
 
-			// Once we reach the end, reshuffle the column with new values
-			if(column[i].index == column[i].padding + column[i].length){
-				set_col(&column[i], rows);
+			// Reshuffle Column attributes
+			if(column[c].index == column[c].length + column[c].padding){
+				set_column(&column[c]);
+				column[c].top->next = (struct Droplet*)malloc(sizeof(struct Droplet));
+				column[c].top = column[c].top->next;
+				init_droplet(column[c].top, NULL, &column[c]);
 			}
-		} 
+		}
 	}
 }
 
