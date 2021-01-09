@@ -14,6 +14,22 @@
 -------------------- MR. WORLD WIDE -----------------
 -------------------------------------------------- */
 
+/*
+ *
+ * The asynchronous droplets have a pretty big performance cost.
+ * With asynchronous droplets, we hover around...
+ * 			USR 9% - SYS 9%
+ * 			One core gets sent to 100% usage
+ * With synchronized droplets...
+ * 			USR 2.5% - SYS 7%
+ * 			All cores usage increase a few percent.
+ * Which is pretty much the same as cmatrix.
+ *
+ * TODO:
+ * Add another command line option for synchronous/asynchronous droplets.
+ *
+ */
+
 //FILE* dbg;
 
 // Num rows and columns, set in main().
@@ -226,11 +242,11 @@ void init_droplet(struct Droplet* droplet, struct Droplet* next, struct Column* 
 
 void make_it_rain(struct Column* column){
 	for(size_t c = 0; c < COLS; c++){
-		column[c].tick++;
+//		column[c].tick++;
 
-		if(column[c].tick == column[c].speed) {
+//		if(column[c].tick == column[c].speed) {
 			column[c].index++;
-			column[c].tick = 0;
+//			column[c].tick = 0;
 
 			struct Droplet* droplet = column[c].bottom;
 			while(droplet != NULL){
@@ -247,14 +263,15 @@ void make_it_rain(struct Column* column){
 						attron(COLOR_PAIR(2));
 						mvprintw(head - 1, c, "%s", droplet->prev_char);
 					}
-					char str[4] = " ";
-					if(!droplet->is_blank)
-						strncpy(str, charset[(rand()%(charset_len)) + 1], 4);
-					strncpy(droplet->prev_char, str, 4);
+					if(!droplet->is_blank) {
+						char str[4] = " ";
+						strncpy(str, charset[(rand() % (charset_len)) + 1], 4);
+						strncpy(droplet->prev_char, str, 4);
 
-					// Sets color to Head Color, unless droplet reaches the bottom
-					(droplet->head + 1 >= ROWS) ? attron(COLOR_PAIR(2)) : attron(COLOR_PAIR(1));
-					mvprintw(head, c, "%s", str);
+						// Sets color to Head Color, unless droplet reaches the bottom
+						(droplet->head + 1 >= ROWS) ? attron(COLOR_PAIR(2)) : attron(COLOR_PAIR(1));
+						mvprintw(head, c, "%s", str);
+					}
 				}
 
 				// Move the tail down one position and clear the character at that position,
@@ -283,7 +300,7 @@ void make_it_rain(struct Column* column){
 				init_droplet(column[c].top, NULL, &column[c]);
 			}
 		}
-	}
+//	}
 }
 
 void set_h_color(char* head){
