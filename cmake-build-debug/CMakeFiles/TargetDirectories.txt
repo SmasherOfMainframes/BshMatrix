@@ -1,3 +1,0 @@
-/home/smigii/Code/projects/cRain/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-/home/smigii/Code/projects/cRain/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/smigii/Code/projects/cRain/cmake-build-debug/CMakeFiles/crain.dir
