@@ -131,44 +131,44 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named cRain
+# Target rules for targets named crain
 
 # Build rule for target.
-cRain: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 cRain
-.PHONY : cRain
+crain: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 crain
+.PHONY : crain
 
 # fast build rule for target.
-cRain/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cRain.dir/build.make CMakeFiles/cRain.dir/build
-.PHONY : cRain/fast
+crain/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/crain.dir/build.make CMakeFiles/crain.dir/build
+.PHONY : crain/fast
 
-cRain.o: cRain.c.o
+crain.o: crain.c.o
 
-.PHONY : cRain.o
+.PHONY : crain.o
 
 # target to build an object file
-cRain.c.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cRain.dir/build.make CMakeFiles/cRain.dir/cRain.c.o
-.PHONY : cRain.c.o
+crain.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/crain.dir/build.make CMakeFiles/crain.dir/crain.c.o
+.PHONY : crain.c.o
 
-cRain.i: cRain.c.i
+crain.i: crain.c.i
 
-.PHONY : cRain.i
+.PHONY : crain.i
 
 # target to preprocess a source file
-cRain.c.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cRain.dir/build.make CMakeFiles/cRain.dir/cRain.c.i
-.PHONY : cRain.c.i
+crain.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/crain.dir/build.make CMakeFiles/crain.dir/crain.c.i
+.PHONY : crain.c.i
 
-cRain.s: cRain.c.s
+crain.s: crain.c.s
 
-.PHONY : cRain.s
+.PHONY : crain.s
 
 # target to generate assembly for a file
-cRain.c.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cRain.dir/build.make CMakeFiles/cRain.dir/cRain.c.s
-.PHONY : cRain.c.s
+crain.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/crain.dir/build.make CMakeFiles/crain.dir/crain.c.s
+.PHONY : crain.c.s
 
 # Help Target
 help:
@@ -178,10 +178,10 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
-	@echo "... cRain"
-	@echo "... cRain.o"
-	@echo "... cRain.i"
-	@echo "... cRain.s"
+	@echo "... crain"
+	@echo "... crain.o"
+	@echo "... crain.i"
+	@echo "... crain.s"
 .PHONY : help
 
 

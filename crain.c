@@ -7,6 +7,9 @@
 #include <argp.h>		// For command line processing
 #include <ncursesw/ncurses.h>
 
+#define MAX_NUM_CHARS 256
+#define BUFFER_SIZE 256
+
 #define DEFAULT_HEAD_COLOR "white"
 #define DEFAULT_TAIL_COLOR "green"
 
@@ -14,20 +17,18 @@
 -------------------- MR. WORLD WIDE -----------------
 -------------------------------------------------- */
 
-//FILE* dbg;
-
 // Num rows and columns, set in main().
 int COLS;
 int ROWS;
 
 // Data struct for each column
 struct Column{
-	unsigned int speed;		// How many ticks until the droplet falls
-	int tick;				// Keeps track of time for each column
-	int index;				// How many times has tick reached index
-	int padding;			// How many leading " " are in the string
-	int length;				// Determines the length of the "droplet" string
-	bool is_blank;			// Is the "droplet" string blank or regular?
+	unsigned int speed;     // How many ticks until the droplet falls
+	int tick;               // Keeps track of time for each column
+	int index;              // How many times has tick reached index
+	int padding;            // How many leading " " are in the string
+	int length;             // Determines the length of the "droplet" string
+	bool is_blank;          // Is the "droplet" string blank or regular?
 
 	struct Droplet* bottom;
 	struct Droplet* top;
@@ -51,7 +52,7 @@ struct config {
 	unsigned int speed;
 };
 
-char charset[256][4] = {
+char charset[MAX_NUM_CHARS][4] = {
 	" ", "a", "b", "c", "d",
 	"e", "f", "g", "h", "i",
 	"j", "k", "l", "m", "n",
@@ -142,7 +143,7 @@ int main(int argc, char* argv[]){
 	// Needed for unicode support. MUST BE FIRST.
 	setlocale(LC_ALL, "en_CA.UTF-8");
 
-	// ----- ARGP ----- //
+	// ----- ARGP STUFF ----- //
 
 	struct config config;
 	strncpy(config.col_hd, DEFAULT_HEAD_COLOR, 16);
@@ -162,7 +163,7 @@ int main(int argc, char* argv[]){
 	struct argp argp = { options, parse_opt, 0, 0 };
 	argp_parse(&argp, argc, argv, 0, 0, &config);
 
-	// ----- NCURSE INIT ----- //
+	// ----- NCURSES INIT ----- //
 
 	initscr();
 	start_color();
@@ -189,8 +190,6 @@ int main(int argc, char* argv[]){
 	// Initialize the starting values of each column.
 	init_columns(columns);
 
-//	dbg = fopen("/home/smigii/Code/projects/cRain/debug.txt", "w");
-
 	// ------ MAIN LOOP -------- //
 	if(config.async){
 		while( !(is_keypressed()) ){
@@ -206,10 +205,8 @@ int main(int argc, char* argv[]){
 		}
 	}
 
-
 	// ----- Goodbye ----- //
 	endwin();
-//	fclose(dbg);
 	return 0;
 }
 
@@ -315,7 +312,6 @@ void make_it_rain(struct Column* column){
 
 		mir_loop(column, c);
 	}
-
 }
 
 void set_speed(struct config* config){
@@ -354,69 +350,53 @@ void set_color(char* color, short pair){
 }
 
 void set_charset(char* name){
-	// Build the path string so we can check if the user has created the ~/.config/cRain/charsets file
-	char home[] = "/home/";
-	char path1[] = "/.config/cRain/charsets";
-	char user[32];
-	strncpy(user, getlogin(), 16);
+	char path[64]; // Path to crain charset file
+	char buffer[BUFFER_SIZE];
+	char* token;
+	FILE* fp;
+	int idx = -1;
 
-	char path[64];
-	strncat(path, home, 7);
-	strncat(path, user, 32);
-	strncat(path, path1, 24);
+	// Build the path string so we can check if the user has created the ~/.config/crain/charsets file
+	snprintf(path, 64, "%s%s%s", "/home/", getlogin(), "/.config/crain/charsets");
 
-	int match_flag = 0;
+	// Check for access
+	if(access(path, R_OK) != 0){
+		endwin();
+		printf("%s does not exits or you cannot access it, exiting...\n", path);
+		exit(-1);
+	} else {
+		fp = fopen(path, "r");
+	}
 
-	// If there is a charset file, then open er up and checky checky
-	if(!access(path, R_OK)) {
-		FILE *fp = fopen(path, "r");
-		char buff_line[256];
+	// Loop through all lines in the file, check first token for name match
+	while(fgets(buffer, BUFFER_SIZE, fp) != NULL){
+		// First token is the charset name
+		token = strtok(buffer, " ");
 
-		while (fgets(buff_line, 256, fp) != NULL) {
-			// First we parse through the names of the charsets given in the charsets file
-			// and check for a match against param name
-			char buff_name[64];
-			int idx = 0;
-			while (buff_line[idx] != ' ') {
-				buff_name[idx] = buff_line[idx];
+		// If first token matches name, overwrite charset[][]
+		if(strncmp(token, name, 16) == 0) {
+			// Reset the default character set
+			charset_len = 0;
+			charset[0][0] = ' ';
+
+			idx = 1;
+			token = strtok(NULL, " \t\r\n\v\f");
+			while (token != NULL) {
+				strcpy(charset[idx], token);
+				charset_len++;
 				idx++;
+				token = strtok(NULL, " \t\r\n\v\f");
 			}
-			buff_name[idx] = '\0';
-
-			idx++;
-
-			// If we have a matchy match, update the charset array.
-			if (!strcmp(buff_name, name)) {
-				match_flag = 1;
-				// Reset the default character set
-				charset_len = 1;
-				charset[0][0] = ' ';
-				// LOOP THROUGH ALL CHARS
-				char buff_char[4];
-				int i = 0;
-				while (buff_line[idx - 1] != '\0') {
-					if (buff_line[idx] == ' ' || buff_line[idx] == '\0') {
-						buff_char[i] = '\0';
-						idx++;
-						strcpy(charset[charset_len], buff_char);
-						charset_len++;
-						i = 0;
-					} else {
-						buff_char[i] = buff_line[idx];
-						idx++;
-						i++;
-					}
-				}
-				charset_len -= 2;    // lol why does this stabilize everything??
-				break;
-			}
-		}
-		if(!match_flag) {
-			printf("Not a valid charset, fucko.\n");
-			printf("Continuing with default lame charset in 3 seconds.\n");
-			usleep(3000000);
 		}
 	}
+
+	// -1 means we never found a match
+	if(idx == -1){
+		endwin();
+		printf("%s character set does not exist...\n", name);
+		exit(-1);
+	}
+
 }
 
 int is_keypressed()

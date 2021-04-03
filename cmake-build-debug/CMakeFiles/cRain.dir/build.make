@@ -77,27 +77,27 @@ include CMakeFiles/cRain.dir/progress.make
 # Include the compile flags for this target's objects.
 include CMakeFiles/cRain.dir/flags.make
 
-CMakeFiles/cRain.dir/cRain.c.o: CMakeFiles/cRain.dir/flags.make
-CMakeFiles/cRain.dir/cRain.c.o: ../cRain.c
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/smigii/Code/projects/cRain/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/cRain.dir/cRain.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -o CMakeFiles/cRain.dir/cRain.c.o   -c /home/smigii/Code/projects/cRain/cRain.c
+CMakeFiles/cRain.dir/crain.c.o: CMakeFiles/cRain.dir/flags.make
+CMakeFiles/cRain.dir/crain.c.o: ../crain.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/smigii/Code/projects/cRain/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/cRain.dir/crain.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -o CMakeFiles/cRain.dir/crain.c.o   -c /home/smigii/Code/projects/cRain/crain.c
 
-CMakeFiles/cRain.dir/cRain.c.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/cRain.dir/cRain.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/smigii/Code/projects/cRain/cRain.c > CMakeFiles/cRain.dir/cRain.c.i
+CMakeFiles/cRain.dir/crain.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/cRain.dir/crain.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/smigii/Code/projects/cRain/crain.c > CMakeFiles/cRain.dir/crain.c.i
 
-CMakeFiles/cRain.dir/cRain.c.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/cRain.dir/cRain.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/smigii/Code/projects/cRain/cRain.c -o CMakeFiles/cRain.dir/cRain.c.s
+CMakeFiles/cRain.dir/crain.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/cRain.dir/crain.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/smigii/Code/projects/cRain/crain.c -o CMakeFiles/cRain.dir/crain.c.s
 
 # Object files for target cRain
 cRain_OBJECTS = \
-"CMakeFiles/cRain.dir/cRain.c.o"
+"CMakeFiles/cRain.dir/crain.c.o"
 
 # External object files for target cRain
 cRain_EXTERNAL_OBJECTS =
 
-cRain: CMakeFiles/cRain.dir/cRain.c.o
+cRain: CMakeFiles/cRain.dir/crain.c.o
 cRain: CMakeFiles/cRain.dir/build.make
 cRain: CMakeFiles/cRain.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/smigii/Code/projects/cRain/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking C executable cRain"

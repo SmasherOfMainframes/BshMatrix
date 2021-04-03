@@ -1,1 +1,1 @@
-/usr/bin/cc -g   CMakeFiles/cRain.dir/cRain.c.o  -o cRain  -lncursesw 
+/usr/bin/cc -g   CMakeFiles/cRain.dir/crain.c.o  -o cRain  -lncursesw 

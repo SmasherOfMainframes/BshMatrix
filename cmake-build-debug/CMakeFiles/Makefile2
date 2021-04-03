@@ -73,7 +73,7 @@ CMAKE_BINARY_DIR = /home/smigii/Code/projects/cRain/cmake-build-debug
 # Directory level rules for the build root directory
 
 # The main recursive "all" target.
-all: CMakeFiles/cRain.dir/all
+all: CMakeFiles/crain.dir/all
 
 .PHONY : all
 
@@ -83,36 +83,36 @@ preinstall:
 .PHONY : preinstall
 
 # The main recursive "clean" target.
-clean: CMakeFiles/cRain.dir/clean
+clean: CMakeFiles/crain.dir/clean
 
 .PHONY : clean
 
 #=============================================================================
-# Target rules for target CMakeFiles/cRain.dir
+# Target rules for target CMakeFiles/crain.dir
 
 # All Build rule for target.
-CMakeFiles/cRain.dir/all:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cRain.dir/build.make CMakeFiles/cRain.dir/depend
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cRain.dir/build.make CMakeFiles/cRain.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/smigii/Code/projects/cRain/cmake-build-debug/CMakeFiles --progress-num=1,2 "Built target cRain"
-.PHONY : CMakeFiles/cRain.dir/all
+CMakeFiles/crain.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/crain.dir/build.make CMakeFiles/crain.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/crain.dir/build.make CMakeFiles/crain.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/smigii/Code/projects/cRain/cmake-build-debug/CMakeFiles --progress-num=1,2 "Built target crain"
+.PHONY : CMakeFiles/crain.dir/all
 
 # Build rule for subdir invocation for target.
-CMakeFiles/cRain.dir/rule: cmake_check_build_system
+CMakeFiles/crain.dir/rule: cmake_check_build_system
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/smigii/Code/projects/cRain/cmake-build-debug/CMakeFiles 2
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/cRain.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/crain.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/smigii/Code/projects/cRain/cmake-build-debug/CMakeFiles 0
-.PHONY : CMakeFiles/cRain.dir/rule
+.PHONY : CMakeFiles/crain.dir/rule
 
 # Convenience name for target.
-cRain: CMakeFiles/cRain.dir/rule
+crain: CMakeFiles/crain.dir/rule
 
-.PHONY : cRain
+.PHONY : crain
 
 # clean rule for target.
-CMakeFiles/cRain.dir/clean:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cRain.dir/build.make CMakeFiles/cRain.dir/clean
-.PHONY : CMakeFiles/cRain.dir/clean
+CMakeFiles/crain.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/crain.dir/build.make CMakeFiles/crain.dir/clean
+.PHONY : CMakeFiles/crain.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.

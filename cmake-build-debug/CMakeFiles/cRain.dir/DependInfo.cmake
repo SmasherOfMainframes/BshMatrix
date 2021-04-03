@@ -4,7 +4,7 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_C
-  "/home/smigii/Code/projects/cRain/cRain.c" "/home/smigii/Code/projects/cRain/cmake-build-debug/CMakeFiles/cRain.dir/cRain.c.o"
+  "/home/smigii/Code/projects/cRain/crain.c" "/home/smigii/Code/projects/cRain/cmake-build-debug/CMakeFiles/cRain.dir/crain.c.o"
   )
 set(CMAKE_C_COMPILER_ID "GNU")
 
