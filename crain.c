@@ -211,7 +211,7 @@ int main(int argc, char* argv[]){
 
 	// ----- Goodbye ----- //
 	endwin();
-	printf("%d\n", shred_columns(columns));
+	shred_columns(columns);
 	return 0;
 }
 
