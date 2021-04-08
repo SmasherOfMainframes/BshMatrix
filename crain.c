@@ -94,6 +94,8 @@ void set_charset(char* name);
 
 int is_keypressed();
 
+int shred_columns(struct Column* column);
+
 /* --------------------------------------------------
 ------------------------- ARGP ----------------------
 -------------------------------------------------- */
@@ -185,6 +187,7 @@ int main(int argc, char* argv[]){
 	// Sets ROWS and COLS to size of terminal.
 	getmaxyx(stdscr, ROWS, COLS);
 
+//	/*
 	// Array of Column structs, used to hold column-specific data
 	struct Column columns[COLS];
 	// Initialize the starting values of each column.
@@ -204,9 +207,11 @@ int main(int argc, char* argv[]){
 			usleep(config.speed);
 		}
 	}
+//	 */
 
 	// ----- Goodbye ----- //
 	endwin();
+	printf("%d\n", shred_columns(columns));
 	return 0;
 }
 
@@ -240,6 +245,24 @@ void init_droplet(struct Droplet* droplet, struct Droplet* next, struct Column* 
 	droplet->head = -1;
 	droplet->tail = -1;
 	droplet->next = next;
+}
+
+int shred_columns(struct Column* column){
+	int count = 0;
+	for(size_t i = 0; i < COLS; i++){
+
+		struct Droplet* curr = column[i].bottom;
+		while(curr != NULL){
+			struct Droplet* next = curr->next;
+			free(curr);
+			count++;
+			curr = next;
+		}
+		column[i].top = NULL;
+		column[i].bottom = NULL;
+
+	}
+	return count;
 }
 
 void mir_loop(struct Column* column, size_t c){
